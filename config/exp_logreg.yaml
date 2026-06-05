@@ -1,0 +1,14 @@
+# config/exp_logreg.yaml
+experiment_name: "Credit_Scoring"
+
+load: "baseline"
+preprocess: "linear"
+model: "logreg"
+
+hyperparameters:
+  solver: "lbfgs"
+  max_iter: 150
+  C: 1.0
+  l1_ratio: 0.0            # FIXED: 0.0 means pure L2 (Ridge), 1.0 means pure L1 (Lasso)
+  class_weight: "balanced"
+  tol: 0.001

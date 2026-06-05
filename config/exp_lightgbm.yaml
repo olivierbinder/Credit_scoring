@@ -1,0 +1,20 @@
+# config/exp_lightgbm.yaml
+experiment_name: "Credit_Scoring"
+
+load: "Full"
+preprocess: "Important_features"
+model: "lightgbm"
+
+hyperparameters:
+  n_estimators: 2000
+  learning_rate: 0.01
+  num_leaves: 16
+  colsample_bytree: 0.8
+  subsample: 0.7
+  max_depth: 5
+  reg_alpha: 0.5
+  reg_lambda: 0.5
+  min_split_gain: 0.02
+  min_child_weight: 60
+  n_jobs: 4
+  verbose: -1

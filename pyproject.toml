@@ -1,0 +1,38 @@
+[project]
+name = "credit-scoring"
+version = "0.1.0"
+description = ""
+readme = "README.md"
+authors = [
+    { name = "Olivier", email = "mail@mail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "catboost>=1.2.10",
+    "lightgbm>=4.6.0",
+    "matplotlib>=3.10.9",
+    "missingno>=0.5.2",
+    "mlflow>=3.12.0",
+    "numba>=0.59.0",
+    "numpy>=2.4.4",
+    "pandas>=2.3.3",
+    "python-dotenv>=1.2.2",
+    "scikit-learn>=1.8.0",
+    "seaborn>=0.13.2",
+    "shap>=0.46.0",
+    "tabulate>=0.10.0",
+    "xgboost>=3.2.0",
+]
+
+[project.scripts]
+credit-scoring = "credit_scoring:main"
+
+[build-system]
+requires = ["uv_build>=0.11.2,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.2.0",
+    "ruff>=0.15.12",
+]
