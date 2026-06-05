@@ -1,0 +1,10 @@
+# config/exp_dummy.yaml
+experiment_name: "Credit_Scoring"
+run_name: "Dummy_Stratified_Baseline"
+
+load: "baseline"
+preprocess: "linear"
+model: "dummy"
+
+hyperparameters:
+  strategy: "stratified"

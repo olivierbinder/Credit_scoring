@@ -1,0 +1,44 @@
+# --- NOTEBOOKS ET DOSSIERS ---
+notebooks/
+**/backup/
+
+# --- MLFLOW ---
+mlruns/
+plots/
+mlflow.db
+mlflow.db-journal
+
+# --- DATA & ARTIFACTS ---
+data/
+artifacts/
+logs/
+*.csv
+*.parquet
+*.json
+*.log
+*.png
+
+# --- ENVIRONMENTS ---
+.env
+.venv/
+env/
+venv/
+
+# --- PYTHON ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# --- IDE & OS ---
+*.code-workspace
+.DS_Store
+.vscode/
+.idea/
+.ipynb_checkpoints/

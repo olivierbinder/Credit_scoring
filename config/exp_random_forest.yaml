@@ -1,0 +1,21 @@
+# config/exp_rf.yaml
+experiment_name: "Credit_Scoring"
+
+# Pipeline Strategy Core Architecture
+load: "baseline"          # Data loader choice
+preprocess: "tree"      # Preprocessing choice (Change to 'tree' if you make a tree-specific loader)
+model: "random_forest"
+
+# Hyperparameters to track, tune, and map to individual MLflow columns
+hyperparameters:
+  n_estimators: 100       # Number of trees in the forest (Higher is more stable but slower)
+  max_depth: 12           # Maximum depth of each tree (Crucial for controlling overfitting)
+
+  min_samples_split: 2    # Minimum samples required to split an internal node
+  min_samples_leaf: 1     # Minimum samples required to be at a leaf node
+
+  max_features: "sqrt"    # Number of features to consider when looking for the best split
+  class_weight: "balanced" # Adjusts weights inversely proportional to class frequencies to handle imbalance
+
+  criterion: "gini"       # Function to measure the quality of a split: 'gini' or 'entropy'
+  n_jobs: -1              # Uses all available CPU cores to speed up training
