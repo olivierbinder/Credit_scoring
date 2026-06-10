@@ -1,0 +1,34 @@
+# Cache et environnements virtuels
+.venv/
+__pycache__/
+*.pyc
+
+# --- NOTEBOOKS ET DOSSIERS ---
+notebooks/
+**/backup/
+
+# MLflow et données
+mlruns/
+mlflow.db
+mlflow.db-journal
+plots/
+data/
+*.csv
+*.parquet
+*.json
+*.log
+*.png
+
+
+# Git et Docker
+.git/
+.gitignore
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# IDE et fichiers système
+.vscode/
+.idea/
+.DS_Store
+*.code-workspace

@@ -16,24 +16,24 @@ from credit_scoring.config import (
     DIR_CONFIG,
     DIR_DATA_PROCESSED,
 )
-from credit_scoring.logger import logger
-from credit_scoring.model.evaluate import (
-    evaluate_and_log_metrics,
-    generate_and_log_plots,
-)
-from credit_scoring.model.explain import (
-    compute_and_save_shap,
-    extract_and_plot_importance,
-)
-from credit_scoring.model.train import (
-    optimize_threshold,
-    run_cross_validation,
-    train_production_model,
-)
-from credit_scoring.prepare.preprocess import (
+from credit_scoring.data.preprocess import (
     load_and_preprocess_all,
     select_important_features,
     select_top_variance_features,
+)
+from credit_scoring.logger import logger
+from credit_scoring.models.evaluate import (
+    evaluate_and_log_metrics,
+    generate_and_log_plots,
+)
+from credit_scoring.models.explain import (
+    compute_and_save_shap,
+    extract_and_plot_importance,
+)
+from credit_scoring.models.train import (
+    optimize_threshold,
+    run_cross_validation,
+    train_production_model,
 )
 from credit_scoring.utils import load_yaml_config
 

@@ -6,8 +6,8 @@ from sklearn.model_selection import RandomizedSearchCV
 
 # Imports projet
 from credit_scoring.config import DF_PROC_PATH
-from credit_scoring.model.train import business_cost_scorer
-from credit_scoring.prepare.preprocess import select_important_features
+from credit_scoring.data.preprocess import select_important_features
+from credit_scoring.models.train import business_cost_scorer
 
 # --- CONFIGURATION ---
 MODEL_URI = "models:/LightGBM_20features/1"

@@ -1,0 +1,10 @@
+services:
+  app:
+    build: .
+    container_name: ml_engineering_app
+    ports:
+      - "8000:8000"   # Accès API
+      - "7860:7860"   # Accès UI
+    volumes:
+      - .:/app
+      - /app/.venv    # Empêche l'écrasement du venv
