@@ -2,11 +2,13 @@ import logging
 import os
 import sys
 
+from credit_scoring.config import DIR_ROOT
+
 # LOGGER
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 logging_str = "%(asctime)s: %(message)s"
-log_dir = "logs"
-log_filepath = os.path.join(log_dir, "running_logs.log")
+log_dir = DIR_ROOT / "logs"
+log_filepath = DIR_ROOT / "logs" / "running_logs.log"
 os.makedirs(name=log_dir, exist_ok=True)
 
 logging.basicConfig(

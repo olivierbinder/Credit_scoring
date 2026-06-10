@@ -56,6 +56,9 @@ PIPELINE_PATH = DIR_DATA_PROCESSED / "full_pipeline.pkl"
 
 # MODELS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+PROD_MODEL = DIR_ROOT / "artifacts/production_model/model.pkl"
+
 MODEL_REGISTRY = {
     "dummy": {
         "model_class": DummyClassifier,

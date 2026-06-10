@@ -1,4 +1,4 @@
-from credit_scoring.main import run_experiment
+from credit_scoring.pipelines.training import run_experiment
 
 run_experiment(
     config="exp_lightgbm.yaml",
