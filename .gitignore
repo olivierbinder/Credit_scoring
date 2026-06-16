@@ -9,7 +9,7 @@ mlflow.db
 mlflow.db-journal
 
 # --- DATA ---
-data/
+/data/
 logs/
 *.csv
 *.parquet
