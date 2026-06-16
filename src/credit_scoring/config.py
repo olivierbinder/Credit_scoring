@@ -2,18 +2,8 @@
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 from pathlib import Path
 
-import pandas as pd
-from catboost import CatBoostClassifier
-from lightgbm import LGBMClassifier
-from sklearn.dummy import DummyClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from xgboost import XGBClassifier
-
 # SETTINGS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-pd.set_option("display.max_columns", 50)
-pd.set_option("display.max_rows", 50)
 RANDOM_STATE: int = 42
 DTYPE_COLORS: dict[str, str] = {
     "float64": "#72efdd",
@@ -21,7 +11,6 @@ DTYPE_COLORS: dict[str, str] = {
     "object": "#ffb5a7",
     "bool": "#f5fbb9",
 }
-
 
 # PATHS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
@@ -31,6 +20,8 @@ DIR_DATA = DIR_ROOT / "data"
 DIR_DATA_RAW = DIR_DATA / "raw"
 DIR_DATA_PROCESSED = DIR_DATA / "processed"
 DIR_CONFIG = DIR_ROOT / "config"
+DIR_MODEL = DIR_ROOT / "artifacts/production_model"
+
 
 # Desciption file
 FILE_DESC = DIR_DATA / "description" / "HomeCredit_columns_description.csv"
@@ -53,64 +44,6 @@ Y_TEST_PROC_PATH = DIR_DATA_PROCESSED / "y_test.csv"
 DF_PROC_PATH = DIR_DATA_PROCESSED / "df_proc.parquet"
 PIPELINE_PATH = DIR_DATA_PROCESSED / "full_pipeline.pkl"
 
-
-# MODELS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
-PROD_MODEL = DIR_ROOT / "artifacts/production_model/model.pkl"
-
-MODEL_REGISTRY = {
-    "dummy": {
-        "model_class": DummyClassifier,
-        "default_params": {"strategy": "prior", "random_state": 42},
-    },
-    "logreg": {
-        "model_class": LogisticRegression,
-        "default_params": {
-            "class_weight": "balanced",
-            "solver": "lbfgs",
-            "max_iter": 500,
-            "random_state": 42,
-        },
-    },
-    "random_forest": {
-        "model_class": RandomForestClassifier,
-        "default_params": {
-            "class_weight": "balanced",
-            "n_jobs": -1,
-            "random_state": 42,
-            "verbose": 0,
-        },
-    },
-    "lightgbm": {
-        "model_class": LGBMClassifier,
-        "default_params": {
-            "class_weight": "balanced",
-            "n_jobs": -1,
-            "random_state": 42,
-            "verbose": -1,
-            "importance_type": "gain",
-        },
-    },
-    "xgboost": {
-        "model_class": XGBClassifier,
-        "default_params": {
-            "n_jobs": -1,
-            "random_state": 42,
-            "verbosity": 0,
-            "eval_metric": "logloss",
-        },
-    },
-    "catboost": {
-        "model_class": CatBoostClassifier,
-        "default_params": {
-            "auto_class_weights": "Balanced",
-            "random_state": 42,
-            "verbose": 0,  # 0 pour ne rien afficher, 100 pour loguer tous les 100 arbres
-            "allow_writing_files": False,
-        },
-    },
-}
 
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 # === Feature Names ===
