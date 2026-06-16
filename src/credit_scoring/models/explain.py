@@ -1,6 +1,5 @@
-# src/credit_scoring/model/explain.py
-
-import os
+# IMPORTS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 
 import matplotlib.pyplot as plt
 import mlflow
@@ -9,14 +8,18 @@ import pandas as pd
 import shap
 
 from credit_scoring.logger import logger
+from credit_scoring.utils import timer
 
 
-def extract_and_plot_importance(
-    model, feature_names: list, run_id: str, max_features: int = 25
-):
+# FEATURE IMPORTANCE EXTRACTION
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+@timer
+def extract_and_plot_importance(model, feature_names: list, max_features: int = 25):
     """
     Extracts global weights and logs to the currently active MLflow run.
     """
+    # Model-specific importances
+    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     if hasattr(model, "coef_"):
         importances = model.coef_[0]
         label = "Coefficient Value (Directional)"
@@ -29,6 +32,8 @@ def extract_and_plot_importance(
         )
         return
 
+    # Log importances to MLflow
+    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     df_imp = (
         pd.DataFrame(
             {
@@ -40,126 +45,98 @@ def extract_and_plot_importance(
         .sort_values(by="absolute_importance", ascending=False)
         .reset_index(drop=True)
     )
+    top_features = df_imp.head(max_features)["feature"].tolist()
 
-    # Plotting logic...
-    df_top = df_imp.head(max_features).sort_values(
-        by="absolute_importance", ascending=True
+    mlflow.log_table(data=df_imp, artifact_file="explain/feature_importance_all.json")
+    mlflow.log_dict(
+        {"top_features": top_features, "label": label},
+        "explain/feature_importance_top.json",
     )
-    fig, ax = plt.subplots(figsize=(11, 8))
 
-    if hasattr(model, "coef_") and (df_top["importance"] < 0).any():
-        colors = ["#e74c3c" if val < 0 else "#2ecc71" for val in df_top["importance"]]
-        ax.barh(df_top["feature"], df_top["importance"], color=colors)
-        ax.axvline(0, color="#34495e", linestyle="--", alpha=0.7)
-    else:
-        ax.barh(df_top["feature"], df_top["absolute_importance"], color="#3498db")
+    # Generate and logFeature Importance Plot
+    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+    df_plot = df_imp.head(max_features).sort_values("absolute_importance")
+
+    fig, ax = plt.subplots(figsize=(8, max(4, max_features * 0.3)))
+    colors = ["#d62728" if v < 0 else "#1f77b4" for v in df_plot["importance"]]
+    ax.barh(df_plot["feature"], df_plot["importance"], color=colors)
     ax.set_xlabel(label)
-    ax.set_title(f"Top {max_features} Features", fontsize=12, pad=15)
+    ax.set_title(f"Top {max_features} Feature Importances")
+    fig.tight_layout()
 
-    mlflow.log_figure(fig, "plots/feature_importance.png")
+    mlflow.log_figure(fig, "explain/feature_importance_plot.png")
     plt.close(fig)
 
-    # LOGGING DIRECTLY TO ACTIVE RUN
-    csv_path = "plots/feature_importances.csv"
-    df_imp.to_csv(csv_path, index=False)
-    mlflow.log_artifact(csv_path, artifact_path="data")
-
-    print("- Interpretability artifacts logged to MLflow.")
+    logger.info("🆗 Feature importance artifacts logged to MLflow.")
+    return df_imp
 
 
-def compute_and_save_shap(
-    model,
-    X_df: pd.DataFrame,
-    model_name: str,
-    sample_size: int = 400,
-    output_dir: str = "plots/shap_reports",
-):
+# SHAP VALUES EXTRACTION
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+@timer
+def extract_and_plot_shap(model, X_sample: pd.DataFrame, max_features: int = 25):
     """
-    Computes SHAP values, generates the summary plot, and logs results
-    directly to the active MLflow run.
+    Computes SHAP values and logs to the currently active MLflow run.
     """
-    os.makedirs(output_dir, exist_ok=True)
-
-    # 1. Prepare Data
-    if len(X_df) > sample_size:
-        X_sample = X_df.sample(n=sample_size, random_state=42)
-    else:
-        X_sample = X_df
-
-    model_type_str = type(model).__name__.lower()
-
-    # 2. Compute SHAP Values
+    # Compute SHAP values
+    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     try:
-        if "logistic" in model_type_str or "linear" in model_type_str:
-            explainer = shap.LinearExplainer(model, X_sample)
-            shap_values = explainer(X_sample)
-            shap_matrix = (
-                shap_values.values[:, :, 1]
-                if hasattr(shap_values, "values") and len(shap_values.values.shape) == 3
-                else (
-                    shap_values.values
-                    if hasattr(shap_values, "values")
-                    else shap_values
-                )
-            )
-
-        elif any(t in model_type_str for t in ["forest", "tree", "xgb", "lgb"]):
-            explainer = shap.TreeExplainer(model)
-            shap_values = explainer.shap_values(X_sample)
-            shap_matrix = (
-                shap_values[1]
-                if isinstance(shap_values, list)
-                else (
-                    shap_values[:, :, 1] if len(shap_values.shape) == 3 else shap_values
-                )
-            )
-
-        else:
-            background = shap.kmeans(X_sample, 10) if len(X_sample) > 10 else X_sample
-            explainer = shap.KernelExplainer(model.predict_proba, background)
-            shap_values = explainer.shap_values(X_sample)
-            shap_matrix = (
-                shap_values[1] if isinstance(shap_values, list) else shap_values
-            )
-
-        # 3. Create Dataframe
-        mean_abs_shap = np.abs(shap_matrix).mean(axis=0)
-        shap_df = (
-            pd.DataFrame({"feature": X_sample.columns, "mean_abs_shap": mean_abs_shap})
-            .sort_values(by="mean_abs_shap", ascending=False)
-            .reset_index(drop=True)
-        )
-
-        # 4. Generate Plot
-        plt.figure(figsize=(10, 6))
-        top_15 = shap_df.head(15).iloc[::-1]
-        plt.barh(
-            top_15["feature"],
-            top_15["mean_abs_shap"],
-            color="darkslateblue",
-            edgecolor="k",
-            alpha=0.85,
-        )
-        plt.xlabel("Mean Absolute SHAP Value")
-        plt.title(f"Global Feature Importance Profiles (SHAP) — {model_name}")
-        plt.tight_layout()
-
-        plot_path = os.path.join(output_dir, f"shap_profile_{model_name.lower()}.png")
-        plt.savefig(plot_path, dpi=150)
-        shap.summary_plot(shap_matrix, X_sample, show=False)
-        mlflow.log_figure(plt.gcf(), "plots/shap_summary_plot.png")
-        plt.close()
-
-        # 5. LOG TO ACTIVE RUN (Fluent API)
-        mlflow.log_artifact(plot_path, artifact_path="shap_reports")
-
-        csv_path = os.path.join(output_dir, "shap_importances.csv")
-        shap_df.to_csv(csv_path, index=False)
-        mlflow.log_artifact(csv_path, artifact_path="shap_reports")
-
-        print("- SHAP analysis logged to MLflow artifacts.")
-        return shap_df
-
+        explainer = shap.Explainer(model, X_sample)
+        shap_values = explainer(X_sample)
     except Exception as e:
-        logger.error(f"❌ Critical error in SHAP analysis: {str(e)}")
-        raise e
+        logger.warning(
+            f"❌ Could not compute SHAP values for {type(model).__name__}: {e}"
+        )
+        return
+
+    values = shap_values.values
+    if values.ndim == 3:
+        values = values[:, :, 1]
+
+    # Log SHAP importances to MLflow
+    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+    mean_abs_shap = np.abs(values).mean(axis=0)
+
+    df_shap = (
+        pd.DataFrame(
+            {
+                "feature": X_sample.columns,
+                "mean_abs_shap": mean_abs_shap,
+            }
+        )
+        .sort_values(by="mean_abs_shap", ascending=False)
+        .reset_index(drop=True)
+    )
+    top_features = df_shap.head(max_features)["feature"].tolist()
+
+    mlflow.log_table(data=df_shap, artifact_file="explain/shap_importance_all.json")
+    mlflow.log_dict(
+        {"top_shap_features": top_features},
+        "explain/shap_importance_all_top.json",
+    )
+
+    # Generate and log SHAP Beeswarm Plot
+    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+    fig = plt.figure(figsize=(8, max(4, max_features * 0.3)))
+    shap.summary_plot(values, X_sample, max_display=max_features, show=False)
+    fig = plt.gcf()
+    fig.tight_layout()
+
+    mlflow.log_figure(fig, "explain/shap_importance_plot_beeswarm.png")
+    plt.close(fig)
+
+    # Generate and log SHAP Importance Bar Plot
+    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+    df_plot = df_shap.head(max_features).sort_values("mean_abs_shap")
+
+    fig2, ax = plt.subplots(figsize=(8, max(4, max_features * 0.3)))
+    ax.barh(df_plot["feature"], df_plot["mean_abs_shap"], color="#1f77b4")
+    ax.set_xlabel("Mean |SHAP value|")
+    ax.set_title(f"Top {max_features} SHAP Feature Importances")
+    fig2.tight_layout()
+
+    mlflow.log_figure(fig2, "explain/shap_importance_plot_bar.png")
+    plt.close(fig2)
+
+    logger.info("🆗 SHAP importance artifacts logged to MLflow.")
+    return df_shap

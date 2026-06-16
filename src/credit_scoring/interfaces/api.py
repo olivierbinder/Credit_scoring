@@ -9,6 +9,25 @@ model = joblib.load(PROD_MODEL)
 expected_features = model.feature_name_
 
 
+# APP INIT
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+app = FastAPI(
+    title="Credit Scoring API ",
+    description="ML API to predict credit risk",
+    version="0.1.0",
+)
+
+
+# HEALTH CHECK ENDPOINT
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+@app.get("/")
+def root():
+    """Health check endpoint for monitoring and load balancer health checks."""
+    return {"status": "ok"}
+
+
+# REQUEST DATA SCHEMA
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 class SimplePropertyFeatures(BaseModel):
     """Caractéristiques simples d'une propriété pour la prédiction"""
 
@@ -34,26 +53,22 @@ class SimplePropertyFeatures(BaseModel):
     DAYS_EMPLOYED_PERC: float = 0.2
 
 
-# Initialisation
-app_simple = FastAPI(
-    title="Credit Scoring API ",
-    description="API to predict credit risk",
-    version="0.1.0",
-)
-
-
-# Root endpoint
-@app_simple.get("/")
-def root():
-    """Basic API status"""
-    return {
-        "message": "Welcome to the Credit Scoring",
-        "status": "running",
-    }
-
-
-@app_simple.post("/predict")
+# MAIN PREDICTION API ENDPOINT
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+@app.post("/predict")
 async def predict(features: SimplePropertyFeatures):
+    """
+    Main prediction endpoint for credit scoring.
+
+    This endpoint:
+    1. Receives validated input data via Pydantic model
+    2. Calls the inference pipeline to transform features and predict
+    3. Returns prediction in JSON format
+
+    Expected Response:
+    - {"prediction": "Likely to default"} or {"prediction": "Not likely to default"}
+    - {"probability": 0.5}
+    """
     try:
         # Convert Pydantic object to dict
         data_dict = features.model_dump()

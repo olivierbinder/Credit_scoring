@@ -8,9 +8,8 @@ plots/
 mlflow.db
 mlflow.db-journal
 
-# --- DATA & ARTIFACTS ---
+# --- DATA ---
 data/
-artifacts/
 logs/
 *.csv
 *.parquet

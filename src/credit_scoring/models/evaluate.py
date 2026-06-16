@@ -1,17 +1,24 @@
+# IMPORTS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 import matplotlib.pyplot as plt
 import mlflow
 from sklearn.metrics import (
     ConfusionMatrixDisplay,
     RocCurveDisplay,
-    classification_report,
     confusion_matrix,
+    f1_score,
     log_loss,
+    precision_score,
+    recall_score,
     roc_auc_score,
 )
 
+from credit_scoring.logger import logger
 from credit_scoring.utils import timer
 
 
+# EVALUATION FUNCTIONS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 def compute_business_cost(y_true, y_pred, cost_fn=10, cost_fp=1):
     """Calculate average business cost per sample (normalized)."""
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
@@ -20,35 +27,34 @@ def compute_business_cost(y_true, y_pred, cost_fn=10, cost_fp=1):
 
 
 @timer
-def evaluate_and_log_metrics(model, X, y, dataset_name, threshold=0.5):
+def evaluate_and_log_metrics(y, y_proba, y_pred, dataset_name):
     """Compute metrics, log to MLflow with prefix, and return results."""
-    y_proba = model.predict_proba(X)[:, 1]
-    y_pred = (y_proba >= threshold).astype(int)
-
-    report = classification_report(
-        y, y_pred, labels=[0, 1], output_dict=True, zero_division=0
-    )
+    tn, fp, fn, tp = confusion_matrix(y, y_pred).ravel()
+    n = len(y)
     metrics = {
-        f"{dataset_name}_roc_auc": roc_auc_score(y, y_proba),
-        f"{dataset_name}_log_loss": log_loss(y, y_proba),
-        f"{dataset_name}_recall_1": report["1"]["recall"],
-        f"{dataset_name}_f1_1": report["1"]["f1-score"],
+        # Primary / decision metrics
         f"{dataset_name}_business_cost": compute_business_cost(y, y_pred),
+        f"{dataset_name}_roc_auc": roc_auc_score(y, y_proba),
+        f"{dataset_name}_recall": recall_score(y, y_pred),
+        f"{dataset_name}_fpr": fp / (fp + tn),  # Fallout Rate
+        # Confusion matrix breakdown (ratios), grouped by predicted class
+        f"{dataset_name}_tp": tp / n,
+        f"{dataset_name}_fn": fn / n,
+        f"{dataset_name}_tn": tn / n,
+        f"{dataset_name}_fp": fp / n,
+        # Secondary
+        f"{dataset_name}_log_loss": log_loss(y, y_proba),
+        f"{dataset_name}_precision": precision_score(y, y_pred),
+        f"{dataset_name}_f1": f1_score(y, y_pred),
     }
-
+    metrics = {k: round(v, 4) for k, v in metrics.items()}
     mlflow.log_metrics(metrics)
-    mlflow.log_text(
-        classification_report(y, y_pred), f"metrics/{dataset_name}_report.txt"
-    )
-
     return metrics
 
 
 @timer
-def generate_and_log_plots(model, X, y, dataset_name, threshold=0.5):
+def generate_and_log_plots(model, X, y, y_pred, dataset_name, threshold=0.5):
     """Generate and log normalized Confusion Matrix and ROC Curve to MLflow."""
-    y_proba = model.predict_proba(X)[:, 1]
-    y_pred = (y_proba >= threshold).astype(int)
 
     # 1. Normalized Confusion Matrix
     fig_cm, ax_cm = plt.subplots(figsize=(6, 6))
@@ -69,4 +75,14 @@ def generate_and_log_plots(model, X, y, dataset_name, threshold=0.5):
     mlflow.log_figure(fig_roc, f"plots/{dataset_name}_roc_curve.png")
     plt.close(fig_roc)
 
-    print(f"- {dataset_name.capitalize()} plots logged to MLflow.")
+
+# MAIN FUNCTION
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+def evaluate_and_log(model, X, y, dataset_name, threshold=0.5):
+    y_proba = model.predict_proba(X)[:, 1]
+    y_pred = (y_proba >= threshold).astype(int)
+
+    metrics = evaluate_and_log_metrics(y, y_proba, y_pred, dataset_name)
+    generate_and_log_plots(model, X, y, y_pred, dataset_name, threshold)
+    logger.info(f"🆗 {dataset_name.capitalize()} metrics and plots logged to MLflow.")
+    return metrics
