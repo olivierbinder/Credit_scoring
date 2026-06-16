@@ -88,8 +88,10 @@ def extract_and_plot_shap(model, X_sample: pd.DataFrame, max_features: int = 25)
             f"❌ Could not compute SHAP values for {type(model).__name__}: {e}"
         )
         return
-
-    values = shap_values.values
+    if isinstance(shap_values, list):
+        values = shap_values[0].values
+    else:
+        values = shap_values.values
     if values.ndim == 3:
         values = values[:, :, 1]
 

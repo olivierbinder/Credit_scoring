@@ -3,9 +3,9 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from credit_scoring.config import PROD_MODEL
+from credit_scoring.config import DIR_MODEL
 
-model = joblib.load(PROD_MODEL)
+model = joblib.load(DIR_MODEL)
 expected_features = model.feature_name_
 
 

@@ -6,6 +6,7 @@ import time
 import numpy as np
 import pandas as pd
 
+from credit_scoring.config import FILE_DESC
 from credit_scoring.logger import logger
 
 
