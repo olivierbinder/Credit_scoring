@@ -23,11 +23,8 @@ jobs:
 
       - name: Lint
         run: |
-            uv run ruff check src/
-            uv run ruff format --check src/
+            uv run ruff check src/ tests/
+            uv run ruff format --check src/ tests/
 
       - name: Tests
-        run: |
-          uv run pytest --cov=src/credit_scoring --cov-report=term-missing || \
-            (uv run pytest --collect-only | grep -q "no tests collected" \
-            && echo "No tests found, skipping." || exit 1)
+        run: uv run pytest
