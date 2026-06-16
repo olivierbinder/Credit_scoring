@@ -713,6 +713,11 @@ dependencies = [
 ]
 
 [package.dev-dependencies]
+ci = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
 dev = [
     { name = "catboost" },
     { name = "ipykernel" },
@@ -748,6 +753,11 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
+ci = [
+    { name = "pytest", specifier = ">=9.1.0" },
+    { name = "pytest-cov", specifier = ">=7.1.0" },
+    { name = "ruff", specifier = ">=0.15.12" },
+]
 dev = [
     { name = "catboost", specifier = ">=1.2.10" },
     { name = "ipykernel", specifier = ">=7.2.0" },
