@@ -11,6 +11,7 @@ DTYPE_COLORS: dict[str, str] = {
     "object": "#ffb5a7",
     "bool": "#f5fbb9",
 }
+MLFLOW_TRACKING_URI = "sqlite:///mlflow.db"
 
 # PATHS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■

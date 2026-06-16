@@ -257,24 +257,26 @@ def run_experiment(
         # Log model
         # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
         logger.info("✅ Logging model")
+        artifact_name = (
+            cfg.model
+            + "_DATA_"
+            + cfg.data_loading
+            + "_ENG_"
+            + cfg.ft_engineering
+            + "_SEL_"
+            + cfg.ft_selection
+        )
+
         X_sample = X_test.sample(5)
-        if cfg.model == "lightgbm":
-            mlflow.lightgbm.log_model(
-                model, artifact_path="model", input_example=X_sample
-            )
-        elif cfg.model == "xgboost":
-            mlflow.xgboost.log_model(
-                model, artifact_path="model", input_example=X_sample
-            )
-        elif cfg.model == "catboost":
-            mlflow.catboost.log_model(
-                model, artifact_path="model", input_example=X_sample
-            )
-        else:
-            # dummy, log_reg, random_forest -> sklearn flavor
-            mlflow.sklearn.log_model(
-                model, artifact_path="model", input_example=X_sample
-            )
+
+        MODEL_LOGGERS = {
+            "lightgbm": mlflow.lightgbm.log_model,
+            "xgboost": mlflow.xgboost.log_model,
+            "catboost": mlflow.catboost.log_model,
+        }
+
+        log_model = MODEL_LOGGERS.get(cfg.model, mlflow.sklearn.log_model)
+        log_model(model, artifact_path=artifact_name, input_example=X_sample)
 
         logger.info(f"🆗 Model '{cfg.model}' logged to MLflow.")
 
