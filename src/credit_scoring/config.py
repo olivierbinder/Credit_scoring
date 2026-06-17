@@ -46,7 +46,7 @@ PIPELINE_PATH = DIR_DATA_PROCESSED / "full_pipeline.pkl"
 # MLFlow DB
 MLFLOW_DB_PATH = DIR_ROOT / "mlflow.db"
 MLFLOW_TRACKING_URI = f"sqlite:///{MLFLOW_DB_PATH}"
-
+PROD_MODEL_PATH = DIR_ROOT / "models" / "production"
 
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 # === Feature Names ===

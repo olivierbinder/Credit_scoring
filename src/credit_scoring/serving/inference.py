@@ -6,9 +6,10 @@ from typing import Literal
 import mlflow
 import numpy as np
 import pandas as pd
+import yaml
 from pydantic import BaseModel, Field
 
-from credit_scoring.config import DIR_DATA_PROCESSED, MLFLOW_TRACKING_URI
+from credit_scoring.config import DIR_DATA_PROCESSED, PROD_MODEL_PATH
 from credit_scoring.logger import logger
 from credit_scoring.serving.constants import (
     EDUCATION_MAP,
@@ -18,20 +19,20 @@ from credit_scoring.serving.constants import (
 # MODEL ARTIFACTS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 _model = None
+_features = None
 _reference_df = None
 _threshold = None
 
 
 def get_model():
-    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    global _model
+    global _model, _features, _threshold
     if _model is None:
-        _model = mlflow.lightgbm.load_model("models:/Production/latest")
+        _model = mlflow.lightgbm.load_model(PROD_MODEL_PATH)
+        _features = _model.feature_name_  # booster_.feature_name()
+        with open(PROD_MODEL_PATH / "MLmodel") as f:
+            mlmodel = yaml.safe_load(f)
+        _threshold = mlmodel["metadata"]["optimal_threshold"]
         logger.info("🆗 Model loaded")
-        _features = _model.feature_names
-        _model_info = mlflow.models.get_model_info("models:/Production/latest")
-        _run = mlflow.get_run(_model_info.run_id)
-        _threshold = float(_run.data.params["evaluation_threshold"])
     return _model, _features, _threshold
 
 

@@ -8,11 +8,13 @@ notebooks/
 **/backup/
 
 # MLflow et données
-mlruns/
+/mlruns/
+!/mlruns/1/models/m-54d19f1191184fa4bae260eedb368fa1/artifacts/model.pkl
 mlflow.db
 mlflow.db-journal
 plots/
-data/
+/data/
+!/data/processed/reference.parquet
 *.csv
 *.parquet
 *.json
