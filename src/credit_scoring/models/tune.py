@@ -6,7 +6,7 @@ from sklearn.model_selection import RandomizedSearchCV
 
 # Imports projet
 from credit_scoring.config import DF_PROC_PATH
-from credit_scoring.data.preprocess import select_important_features
+from credit_scoring.features.preprocess import select_important_features
 from credit_scoring.models.train import business_cost_scorer
 
 # --- CONFIGURATION ---

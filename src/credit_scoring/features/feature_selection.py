@@ -13,7 +13,7 @@ from credit_scoring.models.train import (
     optimize_threshold,
     train_model,
 )
-from credit_scoring.pipelines.training import load_experiment_config
+from credit_scoring.models.training_pipeline import load_experiment_config
 
 
 def build_robust_feature_ranking(

@@ -11,18 +11,16 @@ DTYPE_COLORS: dict[str, str] = {
     "object": "#ffb5a7",
     "bool": "#f5fbb9",
 }
-MLFLOW_TRACKING_URI = "sqlite:///mlflow.db"
-
 # PATHS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-# Directories
+# Project root
 DIR_ROOT = Path(__file__).resolve().parents[2]
+
+# Directories
 DIR_DATA = DIR_ROOT / "data"
 DIR_DATA_RAW = DIR_DATA / "raw"
 DIR_DATA_PROCESSED = DIR_DATA / "processed"
 DIR_CONFIG = DIR_ROOT / "config"
-DIR_MODEL = DIR_ROOT / "artifacts/production_model"
-
 
 # Desciption file
 FILE_DESC = DIR_DATA / "description" / "HomeCredit_columns_description.csv"
@@ -44,6 +42,10 @@ Y_TRAIN_PROC_PATH = DIR_DATA_PROCESSED / "y_train.csv"
 Y_TEST_PROC_PATH = DIR_DATA_PROCESSED / "y_test.csv"
 DF_PROC_PATH = DIR_DATA_PROCESSED / "df_proc.parquet"
 PIPELINE_PATH = DIR_DATA_PROCESSED / "full_pipeline.pkl"
+
+# MLFlow DB
+MLFLOW_DB_PATH = DIR_ROOT / "mlflow.db"
+MLFLOW_TRACKING_URI = f"sqlite:///{MLFLOW_DB_PATH}"
 
 
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
