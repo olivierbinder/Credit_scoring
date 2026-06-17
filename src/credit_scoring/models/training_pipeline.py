@@ -277,7 +277,13 @@ def run_experiment(
         }
 
         log_model = MODEL_LOGGERS.get(cfg.model, mlflow.sklearn.log_model)
-        log_model(model, artifact_path=artifact_name, input_example=X_sample)
+
+        log_model(
+            model,
+            artifact_path=artifact_name,
+            input_example=X_sample,
+            metadata={"optimal_threshold": float(optimal_threshold)},
+        )
 
         logger.info(f"🆗 Model '{cfg.model}' logged to MLflow.")
 
