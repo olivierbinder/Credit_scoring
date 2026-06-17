@@ -3,8 +3,11 @@ services:
     build: .
     container_name: ml_engineering_app
     ports:
-      - "8000:8000"   # Accès API
-      - "7860:7860"   # Accès UI
+      - "8000:8000"
+      - "7860:7860"
+    # En dev : on monte uniquement le code source pour le hot-reload,
+    # sans écraser le venv ni les artefacts copiés dans l'image.
     volumes:
-      - .:/app
-      - /app/.venv    # Empêche l'écrasement du venv
+      - ./src:/app/src:ro
+    env_file:
+      - .env
