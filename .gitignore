@@ -7,16 +7,15 @@ mlruns/
 plots/
 mlflow.db
 mlflow.db-journal
-/models
 
 # --- DATA ---
-/data/
+/data/*
+!/data/processed/
+/data/processed/*
+!/data/processed/reference.parquet
 logs/
-*.csv
-*.parquet
-*.json
-*.log
-*.png
+/models/*
+!/models/production
 
 # --- ENVIRONMENTS ---
 .env
