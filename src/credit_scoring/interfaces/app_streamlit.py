@@ -97,11 +97,11 @@ def make_bar_plot(series, value):
     LABELS = {
         "M": "M",
         "F": "F",
-        "Lower secondary": "Lower<br>secondary",
-        "Secondary / secondary special": "Secondary<br>/ secondary special",
-        "Incomplete higher": "Incomplete<br>higher",
-        "Higher education": "Higher<br>education",
-        "Academic degree": "Academic<br>degree",
+        "Lower secondary": "Low. Sec",
+        "Secondary / secondary special": "Sec.",
+        "Incomplete higher": "Inc.",
+        "Higher education": "Higher",
+        "Academic degree": "Academic",
     }
     fig = go.Figure()
     fig.add_bar(
@@ -110,12 +110,12 @@ def make_bar_plot(series, value):
         marker_color=colors,
     )
     fig.update_layout(
-        height=110,
-        margin=dict(l=0, r=0, t=0, b=0),
+        height=50,
+        margin=dict(l=0, r=0, t=0, b=20),
         showlegend=False,
         yaxis_visible=False,
     )
-    fig.update_xaxes(tickangle=0)
+    fig.update_xaxes(tickangle=0, tickfont_size=9)
     return fig
 
 
