@@ -1,8 +1,12 @@
+# src/credit_scoring/serving/api.py
+
+# IMPORTS
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 import traceback
 
 from fastapi import FastAPI, HTTPException
 
-from credit_scoring.pipelines.inference import CreditScoringInput, lookup, predict
+from credit_scoring.serving.inference import CreditScoringInput, lookup, predict
 
 # APP INIT
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■

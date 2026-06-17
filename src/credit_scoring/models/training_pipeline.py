@@ -51,8 +51,9 @@ from credit_scoring.config import (
     DIR_CONFIG,
     DIR_DATA,
     DIR_DATA_PROCESSED,
+    MLFLOW_TRACKING_URI,
 )
-from credit_scoring.data.preprocess import (
+from credit_scoring.features.preprocess import (
     load_and_preprocess_all,
     select_important_features,
 )
@@ -187,7 +188,7 @@ def run_experiment(
 
     # Train Model
     # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-    mlflow.set_tracking_uri("sqlite:///mlflow.db")
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     mlflow.set_experiment(cfg.name)
     with mlflow.start_run(run_name=cfg.run):
         logger.info("✅ Starting MLFlow run")

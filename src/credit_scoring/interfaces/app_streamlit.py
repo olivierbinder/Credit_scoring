@@ -1,66 +1,43 @@
+# src/credit_scoring/interfaces/app_streamlit.py
 # IMPORTS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 import requests
 import streamlit as st
 from scipy.stats import gaussian_kde
 
-from credit_scoring.pipelines.inference import (
+from credit_scoring.config import DIR_DATA_PROCESSED
+from credit_scoring.serving.constants import (
     CATEGORICAL_FEATURES,
     EDUCATION_INVERSE,
+    EDUCATION_OPTIONS,
+    FEATURE_GROUPS,
     FEATURE_LABELS,
     GENDER_INVERSE,
-    REFERENCE_DF,
-    decode_for_display,
 )
 
 # CONFIGURATION
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 API_BASE = "http://127.0.0.1:8000"
 
-EDUCATION_OPTIONS = [
-    "Lower secondary",
-    "Secondary / secondary special",
-    "Incomplete higher",
-    "Higher education",
-    "Academic degree",
-]
 
-FEATURE_GROUPS = {
-    "📈 Credit Scores": [
-        "EXT_SOURCE_1",
-        "EXT_SOURCE_2",
-        "EXT_SOURCE_3",
-    ],
-    "👤 Applicant Profile": [
-        "CODE_GENDER",
-        "NAME_EDUCATION_TYPE",
-        "DAYS_BIRTH",
-        "DAYS_EMPLOYED",
-        "OWN_CAR_AGE",
-    ],
-    "💰 Loan Application": [
-        "AMT_ANNUITY",
-        "AMT_GOODS_PRICE",
-        "PAYMENT_RATE",
-    ],
-    "📅 Repayment History": [
-        "INSTAL_DPD_MEAN",
-        "INSTAL_AMT_PAYMENT_SUM",
-        "POS_CNT_INSTALMENT_FUTURE_MEAN",
-        "POS_SK_DPD_DEF_MEAN",
-    ],
-    "🏦 Credit History": [
-        "PREV_CNT_PAYMENT_MEAN",
-        "PREV_DAYS_LAST_DUE_1ST_VERSION_MEAN",
-        "ACTIVE_DAYS_CREDIT_MAX",
-    ],
-    "💳 Credit Card Activity": [
-        "CC_CNT_DRAWINGS_ATM_CURRENT_MEAN",
-        "CC_CNT_DRAWINGS_CURRENT_VAR",
-    ],
-}
+def decode_for_display(raw: dict) -> dict:
+    decoded = raw.copy()
+
+    decoded["CODE_GENDER"] = GENDER_INVERSE.get(
+        raw["CODE_GENDER"],
+        "M",
+    )
+
+    decoded["NAME_EDUCATION_TYPE"] = EDUCATION_INVERSE.get(
+        raw["NAME_EDUCATION_TYPE"],
+        "Higher education",
+    )
+
+    return decoded
+
 
 # PAGE CONFIG
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
@@ -81,6 +58,14 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+
+@st.cache_data  # Très important pour ne pas recharger le fichier à chaque interaction
+def load_reference_data():
+    return pd.read_parquet(DIR_DATA_PROCESSED / "reference.parquet")
+
+
+REFERENCE_DF = load_reference_data()
 
 
 # PLOTTING HELPERS
@@ -200,22 +185,23 @@ with col_id:
 with col_button:
     st.write("")
     st.write("")
-
     load_clicked = st.button(
         "Load client",
         use_container_width=True,
     )
 
 if load_clicked:
-    response = requests.get(f"{API_BASE}/lookup/{int(sk_id)}")
+    try:
+        response = requests.get(f"{API_BASE}/lookup/{int(sk_id)}", timeout=5)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Impossible de joindre l'API : {e}")
+    st.stop()
 
     if response.status_code == 200:
         st.session_state["features"] = decode_for_display(response.json())
-
         st.session_state["loaded_sk_id"] = int(sk_id)
-
         st.success("Client trouvé ✅")
-
     else:
         st.error("Client non trouvé ❌")
 

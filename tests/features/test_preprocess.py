@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from credit_scoring.data.preprocess import preprocess_apps, sanitize_feature_names
+from credit_scoring.features.preprocess import preprocess_apps, sanitize_feature_names
 
 # ── sanitize_feature_names ────────────────────────────────────────────────────
 

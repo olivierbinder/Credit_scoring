@@ -1,3 +1,4 @@
+# src/credit_scoring/serving/inference.py
 # IMPORTS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 from typing import Literal
@@ -8,50 +9,37 @@ import pandas as pd
 from pydantic import BaseModel, Field
 
 from credit_scoring.config import DIR_DATA_PROCESSED, MLFLOW_TRACKING_URI
+from credit_scoring.logger import logger
+from credit_scoring.serving.constants import (
+    EDUCATION_MAP,
+    GENDER_MAP,
+)
 
 # MODEL ARTIFACTS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+_model = None
+_reference_df = None
+_threshold = None
 
-model = mlflow.lightgbm.load_model("models:/Production/latest")
-EXPECTED_FEATURES = model.feature_name_
 
-model_info = mlflow.models.get_model_info("models:/Production/latest")
-run = mlflow.get_run(model_info.run_id)
+def get_model():
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    global _model
+    if _model is None:
+        _model = mlflow.lightgbm.load_model("models:/Production/latest")
+        logger.info("🆗 Model loaded")
+        _features = _model.feature_names
+        _model_info = mlflow.models.get_model_info("models:/Production/latest")
+        _run = mlflow.get_run(_model_info.run_id)
+        _threshold = float(_run.data.params["evaluation_threshold"])
+    return _model, _features, _threshold
 
-OPTIMAL_THRESHOLD = float(run.data.params["evaluation_threshold"])
 
-REFERENCE_DF = pd.read_parquet(DIR_DATA_PROCESSED / "reference.parquet")
-
-# REFERENCE DATA
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-CATEGORICAL_FEATURES = {
-    "CODE_GENDER",
-    "NAME_EDUCATION_TYPE",
-}
-
-FEATURE_LABELS = {
-    "EXT_SOURCE_1": "External Score 1",
-    "EXT_SOURCE_2": "External Score 2",
-    "EXT_SOURCE_3": "External Score 3",
-    "CODE_GENDER": "Gender",
-    "NAME_EDUCATION_TYPE": "Education",
-    "DAYS_BIRTH": "Age",
-    "DAYS_EMPLOYED": "Employment Duration",
-    "OWN_CAR_AGE": "Car Age",
-    "AMT_ANNUITY": "Loan Annuity",
-    "AMT_GOODS_PRICE": "Goods Price",
-    "PAYMENT_RATE": "Payment Rate",
-    "INSTAL_DPD_MEAN": "Avg Days Past Due",
-    "INSTAL_AMT_PAYMENT_SUM": "Installment Payments",
-    "POS_CNT_INSTALMENT_FUTURE_MEAN": "Future Installments",
-    "POS_SK_DPD_DEF_MEAN": "POS Delinquency",
-    "PREV_CNT_PAYMENT_MEAN": "Previous Payment Count",
-    "PREV_DAYS_LAST_DUE_1ST_VERSION_MEAN": "Previous Due Date",
-    "ACTIVE_DAYS_CREDIT_MAX": "Active Credit Age",
-    "CC_CNT_DRAWINGS_ATM_CURRENT_MEAN": "ATM Withdrawals",
-    "CC_CNT_DRAWINGS_CURRENT_VAR": "Card Usage Variability",
-}
+def get_reference_df():
+    global _reference_df
+    if _reference_df is None:
+        _reference_df = pd.read_parquet(DIR_DATA_PROCESSED / "reference.parquet")
+    return _reference_df
 
 
 # INPUT SCHEMA
@@ -102,25 +90,6 @@ class CreditScoringInput(BaseModel):
     CC_CNT_DRAWINGS_CURRENT_VAR: float | None = Field(None, ge=0)
 
 
-# CATEGORICAL ENCODING
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-GENDER_MAP = {
-    "M": 1.0,
-    "F": 0.0,
-}
-
-EDUCATION_MAP = {
-    "Lower secondary": 0.0,
-    "Secondary / secondary special": 1.0,
-    "Incomplete higher": 2.0,
-    "Higher education": 3.0,
-    "Academic degree": 4.0,
-}
-
-GENDER_INVERSE = {v: k for k, v in GENDER_MAP.items()}
-EDUCATION_INVERSE = {v: k for k, v in EDUCATION_MAP.items()}
-
-
 # FEATURE TRANSFORMATIONS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 def encode(input_data: CreditScoringInput) -> dict:
@@ -132,26 +101,11 @@ def encode(input_data: CreditScoringInput) -> dict:
     return features
 
 
-def decode_for_display(raw: dict) -> dict:
-    decoded = raw.copy()
-
-    decoded["CODE_GENDER"] = GENDER_INVERSE.get(
-        raw["CODE_GENDER"],
-        "M",
-    )
-
-    decoded["NAME_EDUCATION_TYPE"] = EDUCATION_INVERSE.get(
-        raw["NAME_EDUCATION_TYPE"],
-        "Higher education",
-    )
-
-    return decoded
-
-
 # DATA ACCESS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 def lookup(sk_id: int) -> dict | None:
-    row = REFERENCE_DF.loc[REFERENCE_DF["SK_ID_CURR"] == sk_id]
+    reference = get_reference_df()
+    row = reference.loc[reference["SK_ID_CURR"] == sk_id]
 
     if row.empty:
         return None
@@ -166,11 +120,11 @@ def lookup(sk_id: int) -> dict | None:
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 def predict(
     input_data: CreditScoringInput,
-    threshold: float = OPTIMAL_THRESHOLD,
 ) -> dict:
+    model, expected_features, threshold = get_model()
     features = encode(input_data)
 
-    X = pd.DataFrame([features])[EXPECTED_FEATURES]
+    X = pd.DataFrame([features])[expected_features]
 
     X = X.replace({None: np.nan})
     X = X.astype(float)
