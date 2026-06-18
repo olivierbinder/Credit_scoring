@@ -29,6 +29,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.coverage
 
 # --- IDE & OS ---
 *.code-workspace

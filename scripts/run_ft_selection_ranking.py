@@ -1,4 +1,4 @@
-from credit_scoring.pipelines.feature_selection import (
+from credit_scoring.features.feature_selection import (
     build_robust_feature_ranking,
 )
 
