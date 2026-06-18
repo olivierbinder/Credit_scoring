@@ -34,6 +34,8 @@ jobs:
           echo "=== checking secrets ==="
           echo "HF_USERNAME is set: $([[ -n "$HF_USERNAME" ]] && echo YES || echo NO)"
           echo "HF_TOKEN is set: $([[ -n "$HF_TOKEN" ]] && echo YES || echo NO)"
+          echo "URL: https://${HF_USERNAME}:hf_***@huggingface.co/spaces/${HF_USERNAME}/credit-scoring"
+
           git remote add hf https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/credit-scoring
 
           git push hf hf-deploy:main --force
