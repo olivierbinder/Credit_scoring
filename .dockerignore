@@ -5,11 +5,10 @@ __pycache__/
 
 # --- NOTEBOOKS ET DOSSIERS ---
 notebooks/
-**/backup/
+/backup/
 
 # MLflow et données
 /mlruns/
-!/mlruns/1/models/m-54d19f1191184fa4bae260eedb368fa1/artifacts/model.pkl
 mlflow.db
 mlflow.db-journal
 plots/
