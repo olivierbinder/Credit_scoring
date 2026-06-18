@@ -4,9 +4,17 @@
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 import traceback
 
+import pandas as pd
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import Response
 
-from credit_scoring.serving.inference import CreditScoringInput, lookup, predict
+from credit_scoring.serving.inference import (
+    CreditScoringInput,
+    get_model,
+    get_reference_df,
+    lookup,
+    predict,
+)
 
 # APP INIT
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
@@ -27,6 +35,23 @@ def root():
 
 # MAIN PREDICTION API ENDPOINT
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+@app.get("/model-info")
+def model_info():
+    _, _, threshold = get_model()
+    return {"threshold": threshold}
+
+
+def _serialize_row(row: dict) -> dict:
+    return {k: (None if pd.isna(v) else v) for k, v in row.items()}
+
+
+@app.get("/reference")
+def get_reference_data():
+    df = get_reference_df()
+    return Response(
+        content=df.to_parquet(index=False),
+        media_type="application/octet-stream",
+    )
 
 
 @app.get("/lookup/{sk_id}")

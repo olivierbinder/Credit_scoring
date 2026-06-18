@@ -1,6 +1,8 @@
 # src/credit_scoring/interfaces/app_streamlit.py
 # IMPORTS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+import io
+
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -8,7 +10,6 @@ import requests
 import streamlit as st
 from scipy.stats import gaussian_kde
 
-from credit_scoring.config import DIR_DATA_PROCESSED
 from credit_scoring.serving.constants import (
     CATEGORICAL_FEATURES,
     EDUCATION_INVERSE,
@@ -47,15 +48,31 @@ st.markdown(
         div[data-testid="stMetric"] { background: rgba(128,128,128,0.15); border-radius: 8px; padding: 0.75rem 1rem; }
         div[data-testid="stMetricValue"] { font-size: 1.6rem !important; }
         div[data-testid="column"]:nth-child(2) { padding-right: 2rem; }
+        div[data-testid="stNumberInput"] input { font-size: 0.9rem; }
+        div[data-testid="stNumberInput"] { margin-top: -8px; }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 
+# CACHE
+# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+@st.cache_data
+def load_model_info():
+    response = requests.get(f"{API_BASE}/model-info")
+    response.raise_for_status()
+    return response.json()
+
+
+THRESHOLD = load_model_info()["threshold"]
+
+
 @st.cache_data
 def load_reference_data():
-    return pd.read_parquet(DIR_DATA_PROCESSED / "reference.parquet")
+    response = requests.get(f"{API_BASE}/reference")
+    response.raise_for_status()
+    return pd.read_parquet(io.BytesIO(response.content))
 
 
 REFERENCE_DF = load_reference_data()
@@ -63,18 +80,44 @@ REFERENCE_DF = load_reference_data()
 
 # PLOTTING HELPERS
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-def make_kde_plot(series, value):
-    series = series.dropna()
+
+
+def get_reference_series(feature_name):
+    series = REFERENCE_DF[feature_name]
+    if feature_name == "CODE_GENDER":
+        series = series.map(GENDER_INVERSE)
+    elif feature_name == "NAME_EDUCATION_TYPE":
+        series = series.map(EDUCATION_INVERSE)
+    return series
+
+
+@st.cache_data
+def get_kde_data(feature_name):
+    """Calculé une seule fois par feature, indépendant du client."""
+    series = get_reference_series(feature_name).dropna()
     if len(series) < 10 or series.nunique() < 2:
         return None
     try:
         kde = gaussian_kde(series)
     except Exception:
         return None
-
     xs = np.linspace(series.min(), series.max(), 200)
-    ys = kde(xs)
+    return xs.tolist(), kde(xs).tolist()
 
+
+@st.cache_data
+def get_bar_data(feature_name):
+    """Calculé une seule fois par feature."""
+    series = get_reference_series(feature_name).dropna()
+    counts = series.value_counts().sort_index()
+    return counts.index.tolist(), counts.values.tolist()
+
+
+def make_kde_plot_for_value(feature_name, value):
+    data = get_kde_data(feature_name)
+    if data is None:
+        return None
+    xs, ys = data
     fig = go.Figure()
     fig.add_scatter(x=xs, y=ys, mode="lines", fill="tozeroy")
     if value is not None:
@@ -89,11 +132,11 @@ def make_kde_plot(series, value):
     return fig
 
 
-def make_bar_plot(series, value):
-    counts = series.dropna().value_counts().sort_index()
-    colors = [
-        "crimson" if str(idx) == str(value) else "lightgray" for idx in counts.index
-    ]
+def make_bar_plot_for_value(feature_name, value):
+    data = get_bar_data(feature_name)
+    if data is None:
+        return None
+    index, values = data
     LABELS = {
         "M": "M",
         "F": "F",
@@ -103,11 +146,10 @@ def make_bar_plot(series, value):
         "Higher education": "Higher",
         "Academic degree": "Academic",
     }
+    colors = ["crimson" if str(i) == str(value) else "lightgray" for i in index]
     fig = go.Figure()
     fig.add_bar(
-        x=[LABELS.get(str(x), str(x)) for x in counts.index],
-        y=counts.values,
-        marker_color=colors,
+        x=[LABELS.get(str(x), str(x)) for x in index], y=values, marker_color=colors
     )
     fig.update_layout(
         height=50,
@@ -119,43 +161,21 @@ def make_bar_plot(series, value):
     return fig
 
 
-def get_reference_series(feature_name):
-    series = REFERENCE_DF[feature_name]
-    if feature_name == "CODE_GENDER":
-        series = series.map(GENDER_INVERSE)
-    elif feature_name == "NAME_EDUCATION_TYPE":
-        series = series.map(EDUCATION_INVERSE)
-    return series
-
-
-@st.cache_data
-def make_kde_plot_cached(feature_name, value):
-    series = get_reference_series(feature_name)
-    return make_kde_plot(series, value)
-
-
-@st.cache_data
-def make_bar_plot_cached(feature_name, value):
-    series = get_reference_series(feature_name)
-    return make_bar_plot(series, value)
-
-
 # TOP BAR — title + controls + prediction result
 # ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-title_col, id_col, load_col, predict_col, result_col = st.columns([2, 2, 1, 1, 3])
+title_col, sep, id_col, load_col, predict_col, result_col = st.columns(
+    [2, 0.1, 1, 0.8, 0.8, 4]
+)
 
 with title_col:
-    st.markdown("## 📊 Credit Scoring")
+    st.markdown("### 📊 Credit Scoring")
 
 with id_col:
-    st.write("")
-    sk_id = st.number_input(
-        "SK_ID_CURR", value=100002, min_value=0, step=1, label_visibility="collapsed"
-    )
+    sk_id = st.number_input("ID Client", value=100002, min_value=0, step=1)
 
 with load_col:
     st.write("")
-    load_clicked = st.button("Load client", use_container_width=True)
+    load_clicked = st.button("Load", use_container_width=True)
 
 with predict_col:
     st.write("")
@@ -165,14 +185,60 @@ with result_col:
     if "prediction" in st.session_state:
         result = st.session_state["prediction"]
         prob = result["probability"]
-        is_default = result["prediction"] == "Likely to default"
-        color = "inverse" if is_default else "normal"
-        r1, r2 = st.columns(2)
-        with r1:
-            st.metric("Default probability", f"{prob:.2%}", delta=None)
-        with r2:
-            st.metric("Decision", result["prediction"], delta=None, delta_color=color)
+        is_default = prob >= THRESHOLD
 
+        gauge_col, label_col = st.columns([1.5, 1])
+
+        with gauge_col:
+            fig = go.Figure(
+                go.Indicator(
+                    mode="gauge+number",
+                    value=prob * 100,
+                    number={"suffix": "%", "font": {"size": 22}},
+                    gauge={
+                        "axis": {"range": [0, 100], "tickfont": {"size": 9}},
+                        "bar": {"color": "crimson" if is_default else "steelblue"},
+                        "steps": [
+                            {
+                                "range": [0, THRESHOLD * 100],
+                                "color": "rgba(0,128,0,0.15)",
+                            },
+                            {
+                                "range": [THRESHOLD * 100, 100],
+                                "color": "rgba(255,0,0,0.15)",
+                            },
+                        ],
+                        "threshold": {
+                            "line": {"color": "black", "width": 3},
+                            "thickness": 0.85,
+                            "value": THRESHOLD * 100,
+                        },
+                    },
+                )
+            )
+            fig.update_layout(height=120, margin=dict(l=10, r=10, t=10, b=0))
+            st.plotly_chart(
+                fig, use_container_width=True, config={"displayModeBar": False}
+            )
+
+        with label_col:
+            st.write("")
+            st.write("")
+            icon = "⚠️" if is_default else "✅"
+            color = "crimson" if is_default else "steelblue"
+            verdict = "Likely to default" if is_default else "Not likely to default"
+            st.markdown(
+                f"""
+                <div style="text-align:center; line-height:1.6">
+                    <div style="font-size:2rem">{icon}</div>
+                    <div style="font-size:0.85rem; font-weight:600; color:{color}">{verdict}</div>
+                    <div style="font-size:0.75rem; color:gray; margin-top:4px">
+                        Threshold: <b>{round(THRESHOLD * 100, 2)}%</b>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 st.divider()
 
 # LOAD CLIENT
@@ -188,8 +254,9 @@ if load_clicked:
     if response.status_code == 200:
         st.session_state["features"] = decode_for_display(response.json())
         st.session_state["loaded_sk_id"] = int(sk_id)
-        st.session_state.pop("prediction", None)  # reset stale prediction
-        st.toast(f"Client {int(sk_id)} chargé ✅")
+        st.session_state.pop("prediction", None)
+        st.session_state.pop("edited_features", None)  # reset stale prediction
+        st.toast(f"Client {int(sk_id)} loaded ✅")
     else:
         st.error("Client non trouvé ❌")
 
@@ -271,9 +338,9 @@ def render_feature_group(group_name, features, edited, widget_prefix):
         with col_plot:
             live_val = edited.get(feature_name, value)
             if feature_name in CATEGORICAL_FEATURES:
-                fig = make_bar_plot_cached(feature_name, live_val)
+                fig = make_bar_plot_for_value(feature_name, live_val)
             else:
-                fig = make_kde_plot_cached(feature_name, live_val)
+                fig = make_kde_plot_for_value(feature_name, live_val)
             if fig is not None:
                 st.plotly_chart(
                     fig,
