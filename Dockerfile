@@ -21,10 +21,6 @@ COPY src/ ./src/
 
 RUN uv sync --frozen --no-dev
 
-# Données et modèle de production
-COPY data/processed/reference.parquet ./data/processed/reference.parquet
-COPY models/production/ ./models/production/
-
 # Configs et seuils
 COPY config/ ./config/
 

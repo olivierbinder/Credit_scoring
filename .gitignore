@@ -9,13 +9,8 @@ mlflow.db
 mlflow.db-journal
 
 # --- DATA ---
-/data/*
-!/data/processed/
-/data/processed/*
-!/data/processed/reference.parquet
+/data
 logs/
-/models/*
-!/models/production
 
 # --- ENVIRONMENTS ---
 .env
