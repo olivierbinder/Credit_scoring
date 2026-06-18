@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       #- name: Build Docker image (validation)
       #  run: docker build -t credit-scoring .
@@ -23,6 +25,7 @@ jobs:
         run: |
           git config user.email "github-actions@github.com"
           git config user.name "GitHub Actions"
+          git checkout -b hf-deploy
 
           git add -A
           git commit -m "Deploy ${{ github.sha }}" || echo "No changes to commit"
