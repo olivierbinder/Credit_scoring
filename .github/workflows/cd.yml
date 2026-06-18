@@ -14,9 +14,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: |
-          docker build -t credit-scoring .
+      - name: Build Docker image  (validation)
+        run: docker build -t credit-scoring .
 
       - name: Push to Hugging Face Space
         env:
@@ -25,8 +24,12 @@ jobs:
         run: |
           git config user.email "github-actions@github.com"
           git config user.name "GitHub Actions"
+          git checkout --orphan hf-deploy
+          git add -A
+          git commit -m "deploy from ${{ github.sha }}"
 
-          git remote add hf \
-            https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/credit-scoring
+          git remote | grep -q '^hf$' \
+            && git remote set-url hf https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/credit-scoring \
+            || git remote add hf https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/credit-scoring
 
-          git push hf HEAD:main
+          git push hf hf-deploy:main --force
