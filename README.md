@@ -1,3 +1,12 @@
+---
+title: Credit Scoring
+emoji: 📊
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+---
+
 # Credit Scoring – End-to-End ML Pipeline
 
 ### Purpose
