@@ -1,0 +1,52 @@
+artifact_path: /Users/olivier/Developer/learning/credit-scoring/mlruns/1/models/m-d1a4613afc194846badf1344df0f6e98/artifacts
+flavors:
+  lightgbm:
+    code: null
+    data: model.pkl
+    lgb_version: 4.6.0
+    model_class: lightgbm.sklearn.LGBMClassifier
+    serialization_format: cloudpickle
+    skops_trusted_types: null
+  python_function:
+    data: model.pkl
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.lightgbm
+    python_version: 3.12.13
+is_signature_from_type_hint: false
+metadata:
+  optimal_threshold: 0.495050505050505
+mlflow_version: 3.13.0
+model_id: m-d1a4613afc194846badf1344df0f6e98
+model_size_bytes: 320314
+model_uuid: m-d1a4613afc194846badf1344df0f6e98
+prompts: null
+run_id: 1b1f48b3276b4aa295919c9d3bd4e6d1
+saved_input_example_info:
+  artifact_path: input_example.json
+  pandas_orient: split
+  serving_input_path: serving_input_example.json
+  type: dataframe
+signature:
+  inputs: '[{"type": "double", "name": "EXT_SOURCE_2", "required": true}, {"type":
+    "double", "name": "EXT_SOURCE_3", "required": true}, {"type": "double", "name":
+    "EXT_SOURCE_1", "required": false}, {"type": "double", "name": "PAYMENT_RATE",
+    "required": true}, {"type": "double", "name": "INSTAL_DPD_MEAN", "required": false},
+    {"type": "double", "name": "DAYS_EMPLOYED", "required": true}, {"type": "double",
+    "name": "INSTAL_AMT_PAYMENT_SUM", "required": false}, {"type": "double", "name":
+    "AMT_ANNUITY", "required": true}, {"type": "double", "name": "POS_CNT_INSTALMENT_FUTURE_MEAN",
+    "required": false}, {"type": "double", "name": "CODE_GENDER", "required": true},
+    {"type": "double", "name": "OWN_CAR_AGE", "required": false}, {"type": "double",
+    "name": "NAME_EDUCATION_TYPE", "required": true}, {"type": "double", "name": "DAYS_BIRTH",
+    "required": true}, {"type": "double", "name": "PREV_CNT_PAYMENT_MEAN", "required":
+    false}, {"type": "double", "name": "CC_CNT_DRAWINGS_ATM_CURRENT_MEAN", "required":
+    false}, {"type": "double", "name": "ACTIVE_DAYS_CREDIT_MAX", "required": true},
+    {"type": "double", "name": "AMT_GOODS_PRICE", "required": true}, {"type": "double",
+    "name": "PREV_DAYS_LAST_DUE_1ST_VERSION_MEAN", "required": false}, {"type": "double",
+    "name": "POS_SK_DPD_DEF_MEAN", "required": false}, {"type": "double", "name":
+    "CC_CNT_DRAWINGS_CURRENT_VAR", "required": false}]'
+  outputs: '[{"type": "double", "required": true}]'
+  params: null
+type_hint_from_example: false
+utc_time_created: '2026-06-17 09:36:41.725602'

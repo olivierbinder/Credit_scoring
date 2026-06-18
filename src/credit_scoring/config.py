@@ -21,6 +21,7 @@ DIR_DATA = DIR_ROOT / "data"
 DIR_DATA_RAW = DIR_DATA / "raw"
 DIR_DATA_PROCESSED = DIR_DATA / "processed"
 DIR_CONFIG = DIR_ROOT / "config"
+DIR_PROJ = DIR_ROOT / "src" / "credit_scoring"
 
 # Desciption file
 FILE_DESC = DIR_DATA / "description" / "HomeCredit_columns_description.csv"
@@ -46,7 +47,9 @@ PIPELINE_PATH = DIR_DATA_PROCESSED / "full_pipeline.pkl"
 # MLFlow DB
 MLFLOW_DB_PATH = DIR_ROOT / "mlflow.db"
 MLFLOW_TRACKING_URI = f"sqlite:///{MLFLOW_DB_PATH}"
-PROD_MODEL_PATH = DIR_ROOT / "models" / "production"
+PROD_MODEL_PATH = DIR_PROJ / "serving" / "model"
+REF_DB_PATH = DIR_PROJ / "serving" / "db" / "reference.parquet"
+
 
 # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
 # === Feature Names ===

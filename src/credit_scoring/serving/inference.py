@@ -9,7 +9,7 @@ import pandas as pd
 import yaml
 from pydantic import BaseModel, Field
 
-from credit_scoring.config import DIR_DATA_PROCESSED, PROD_MODEL_PATH
+from credit_scoring.config import PROD_MODEL_PATH, REF_DB_PATH
 from credit_scoring.logger import logger
 from credit_scoring.serving.constants import (
     EDUCATION_MAP,
@@ -39,7 +39,7 @@ def get_model():
 def get_reference_df():
     global _reference_df
     if _reference_df is None:
-        _reference_df = pd.read_parquet(DIR_DATA_PROCESSED / "reference.parquet")
+        _reference_df = pd.read_parquet(REF_DB_PATH)
     return _reference_df
 
 
