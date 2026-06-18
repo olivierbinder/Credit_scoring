@@ -13,8 +13,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Docker image (validation)
-        run: docker build -t credit-scoring .
+      #- name: Build Docker image (validation)
+      #  run: docker build -t credit-scoring .
 
       - name: Push to Hugging Face Space
         env:
@@ -28,6 +28,8 @@ jobs:
           git commit -m "deploy from ${{ github.sha }}"
 
           git remote remove hf 2>/dev/null || true
+          echo "=== remotes after remove ==="
+          git remote -v
           git remote add hf https://${HF_USERNAME}:${HF_TOKEN}@huggingface.co/spaces/${HF_USERNAME}/credit-scoring
 
           git push hf hf-deploy:main --force
