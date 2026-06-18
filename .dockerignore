@@ -1,4 +1,5 @@
 # Cache et environnements virtuels
+.env
 .venv/
 __pycache__/
 *.pyc
@@ -17,10 +18,14 @@ plots/
 
 # Git et Docker
 .git/
+.github
 .gitignore
 Dockerfile
 .dockerignore
 docker-compose.yml
+
+# Tests
+/test
 
 # IDE et fichiers système
 .vscode/
