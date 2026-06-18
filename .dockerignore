@@ -13,12 +13,6 @@ mlflow.db
 mlflow.db-journal
 plots/
 /data/
-!/data/processed/reference.parquet
-*.csv
-*.parquet
-*.json
-*.log
-*.png
 
 
 # Git et Docker
