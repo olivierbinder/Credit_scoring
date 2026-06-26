@@ -8,7 +8,7 @@ from sklearn.metrics import roc_auc_score
 # credit_scoring/feature_selection/evaluate_feature_subsets.py
 from sklearn.model_selection import StratifiedKFold, train_test_split
 
-from credit_scoring.config import DF_PROC_PATH, DIR_CONFIG
+from credit_scoring.config import DIR_CONFIG, FILE_DATA_PROCESSED
 from credit_scoring.models.evaluate import compute_business_cost
 from credit_scoring.models.train import (
     optimize_threshold,
@@ -37,7 +37,7 @@ def build_robust_feature_ranking(
     print(f"ℹ️ Model: {cfg.model}\n")
 
     # Load data
-    df = pd.read_parquet(DF_PROC_PATH)
+    df = pd.read_parquet(FILE_DATA_PROCESSED)
     train_df = df[df["TARGET"].notnull()].copy()
     X = train_df.drop(columns=["TARGET", "SK_ID_CURR"])
     y = train_df["TARGET"]
@@ -137,7 +137,7 @@ def evaluate_feature_subsets(
 
     # Load data
 
-    df = pd.read_parquet(DF_PROC_PATH)
+    df = pd.read_parquet(FILE_DATA_PROCESSED)
 
     train_df = df[df["TARGET"].notnull()].copy()
 

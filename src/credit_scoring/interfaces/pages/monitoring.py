@@ -14,9 +14,9 @@ import pandas as pd
 import streamlit as st
 
 from credit_scoring.interfaces.monitoring.data import (
-    DEFAULT_API_PATH,
-    DEFAULT_PRED_PATH,
-    DEFAULT_REF_PATH,
+    DIR_API,
+    DIR_PRED,
+    DIR_REFERENCE,
     NULLABLE_FEATURES,
     NUMERICAL_FEATURES,
     load_api_calls,
@@ -30,9 +30,9 @@ from credit_scoring.interfaces.monitoring.data import (
 with st.sidebar:
     st.header("⚙️ Configuration")
 
-    pred_path = st.text_input("Prediction log", value=DEFAULT_PRED_PATH)
-    api_path = st.text_input("API call log", value=DEFAULT_API_PATH)
-    ref_path = st.text_input("Reference data", value=DEFAULT_REF_PATH)
+    pred_path = st.text_input("Prediction log", value=DIR_PRED)
+    api_path = st.text_input("API call log", value=DIR_API)
+    ref_path = st.text_input("Reference data", value=DIR_REFERENCE)
 
     if st.button("🔄 Recharger les données", use_container_width=True):
         st.cache_data.clear()

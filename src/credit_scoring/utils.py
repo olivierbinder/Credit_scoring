@@ -1,17 +1,15 @@
-# IMPORTS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  IMPORTS                                                                          .
 import functools
 import time
 
 import numpy as np
 import pandas as pd
 
-from credit_scoring.config import FILE_DESC
+from credit_scoring.config import DESC_RAW_FILES
 from credit_scoring.logger import logger
 
 
-# TIMER
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  TIMER                                                                            .
 def timer(func):
     """Decorator to time function."""
 
@@ -27,8 +25,7 @@ def timer(func):
     return wrapper
 
 
-# DATA QUALITY ANALYSIS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  DATA QUALITY ANALYSIS                                                            .
 def generate_data_quality_analysis(df_input, file_path):
     total_rows = len(df_input)
     diagnostic_data = []
@@ -103,7 +100,7 @@ def generate_data_quality_analysis(df_input, file_path):
 
     # Metadata Enrichment (Descriptions)
     # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-    features_desc = pd.read_csv(FILE_DESC)
+    features_desc = pd.read_csv(DESC_RAW_FILES)
     if (
         file_path.name == "application_train.csv"
         or file_path.name == "application_test.csv"
@@ -124,8 +121,7 @@ def generate_data_quality_analysis(df_input, file_path):
     return df_result
 
 
-# PANDAS STYLING
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  PANDAS STYLING                                                                   .
 def display_df(
     df: pd.DataFrame,
     gradient_cols: list | None = None,

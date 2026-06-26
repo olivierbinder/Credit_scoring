@@ -21,7 +21,7 @@ DIR_CONFIG = DIR_ROOT / "config"
 DIR_PROJ = DIR_ROOT / "src" / "credit_scoring"
 
 # Desciption file
-FILE_DESC = DIR_DATA / "description" / "HomeCredit_columns_description.csv"
+DESC_RAW_FILES = DIR_DATA / "description" / "HomeCredit_columns_description.csv"
 
 # Raw files
 FILE_APP_TEST = DIR_DATA_RAW / "application_test.csv"
@@ -38,15 +38,20 @@ X_TRAIN_PROC_PATH = DIR_DATA_PROCESSED / "X_train_proc.csv"
 X_TEST_PROC_PATH = DIR_DATA_PROCESSED / "X_test_proc.csv"
 Y_TRAIN_PROC_PATH = DIR_DATA_PROCESSED / "y_train.csv"
 Y_TEST_PROC_PATH = DIR_DATA_PROCESSED / "y_test.csv"
-DF_PROC_PATH = DIR_DATA_PROCESSED / "df_proc.parquet"
+FILE_DATA_PROCESSED = DIR_DATA_PROCESSED / "df_proc.parquet"
 PIPELINE_PATH = DIR_DATA_PROCESSED / "full_pipeline.pkl"
 
 # MLFlow DB
-MLFLOW_DB_PATH = DIR_ROOT / "mlflow.db"
-MLFLOW_TRACKING_URI = f"sqlite:///{MLFLOW_DB_PATH}"
-PROD_MODEL_PATH = DIR_PROJ / "serving" / "model"
-REF_DB_PATH = DIR_PROJ / "serving" / "db" / "reference.parquet"
+ML_FLOW_DB = DIR_ROOT / "mlflow.db"
+MLFLOW_TRACKING_URI = f"sqlite:///{ML_FLOW_DB}"
+PROD_MODEL = DIR_PROJ / "serving" / "model"
+PROD_REFERENCE = DIR_PROJ / "serving" / "db" / "reference.parquet"
 
+
+# Default paths — overridable via st.session_state set by the main app
+DIR_PRED = "logs/predictions.jsonl"
+DIR_API = "logs/api_calls.jsonl"
+DIR_REFERENCE = "data/processed/reference.parquet"
 
 # %%  # FEATURES                                                                       .
 # Final model features
@@ -73,6 +78,15 @@ NUMERICAL_FEATURES = [
 
 CATEGORICAL_FEATURES = ["CODE_GENDER", "NAME_EDUCATION_TYPE"]
 
+NULLABLE_FEATURES = [
+    "EXT_SOURCE_1",
+    "EXT_SOURCE_3",
+    "DAYS_EMPLOYED",
+    "OWN_CAR_AGE",
+    "ACTIVE_DAYS_CREDIT_MAX",
+    "CC_CNT_DRAWINGS_ATM_CURRENT_MEAN",
+    "CC_CNT_DRAWINGS_CURRENT_VAR",
+]
 # Cat Values
 EDUCATION_OPTIONS = [
     "Lower secondary",

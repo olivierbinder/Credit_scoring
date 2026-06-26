@@ -46,10 +46,10 @@ from sklearn.model_selection import train_test_split
 
 # Project
 from credit_scoring.config import (
-    DF_PROC_PATH,
     DIR_CONFIG,
     DIR_DATA,
     DIR_DATA_PROCESSED,
+    FILE_DATA_PROCESSED,
     MLFLOW_TRACKING_URI,
 )
 from credit_scoring.features.preprocess import (
@@ -132,7 +132,7 @@ def run_experiment(
     # !! Load and Process Data / load processed data.
     if load_raw_data is False:
         logger.info(msg="✅ Loading processed data from cache")
-        df = pd.read_parquet(DF_PROC_PATH)
+        df = pd.read_parquet(FILE_DATA_PROCESSED)
         logger.info(f"🆗 dataset loaded (shape = {df.shape[0]:,d} | {df.shape[1]:,d})")
 
     else:
@@ -141,7 +141,7 @@ def run_experiment(
 
         logger.info(msg="✅ Saving processed data")
         DIR_DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
-        df.to_parquet(DF_PROC_PATH, index=False)
+        df.to_parquet(FILE_DATA_PROCESSED, index=False)
 
     train_df = df[df["TARGET"].notnull()]
     test_df = df[df["TARGET"].isnull()]

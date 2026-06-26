@@ -1,11 +1,11 @@
+# %%  IMPORTS                                                                          .
 import logging
 import os
 import sys
 
 from credit_scoring.config import DIR_ROOT
 
-# LOGGER
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  LOGGER                                                                           .
 logging_str = "%(asctime)s: %(message)s"
 log_dir = DIR_ROOT / "logs"
 log_filepath = DIR_ROOT / "logs" / "running_logs.log"

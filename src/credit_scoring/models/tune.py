@@ -6,7 +6,7 @@ from sklearn.metrics import make_scorer
 from sklearn.model_selection import RandomizedSearchCV
 
 # Imports projet
-from credit_scoring.config import DF_PROC_PATH
+from credit_scoring.config import FILE_DATA_PROCESSED
 from credit_scoring.features.preprocess import select_important_features
 from credit_scoring.models.train import business_cost_scorer
 
@@ -25,7 +25,7 @@ base_model = mlflow.lightgbm.load_model(MODEL_URI)
 # 2. Préparation des données
 print("Chargement et préparation des données...")
 mlflow.set_tracking_uri(TRACKING_URI)
-df = pd.read_parquet(DF_PROC_PATH)
+df = pd.read_parquet(FILE_DATA_PROCESSED)
 train_df = df[df["TARGET"].notnull()]
 
 X_train = train_df.drop(columns=["TARGET", "SK_ID_CURR"])

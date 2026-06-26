@@ -49,9 +49,9 @@ NULLABLE_FEATURES = [
 ]
 
 # Default paths — overridable via st.session_state set by the main app
-DEFAULT_PRED_PATH = "logs/predictions.jsonl"
-DEFAULT_API_PATH = "logs/api_calls.jsonl"
-DEFAULT_REF_PATH = "data/processed/reference.parquet"
+DIR_PRED = "logs/predictions.jsonl"
+DIR_API = "logs/api_calls.jsonl"
+DIR_REFERENCE = "data/processed/reference.parquet"
 
 
 # ──────────────────────────────────────────────────────────────────────────────

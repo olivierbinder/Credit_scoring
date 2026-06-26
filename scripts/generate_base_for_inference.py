@@ -1,7 +1,7 @@
 # scripts/build_reference.py
 import pandas as pd
 
-from credit_scoring.config import DF_PROC_PATH, DIR_DATA_PROCESSED
+from credit_scoring.config import DIR_DATA_PROCESSED, FILE_DATA_PROCESSED
 
 FEATURES = [
     "EXT_SOURCE_2",
@@ -27,7 +27,7 @@ FEATURES = [
 ]
 
 
-df = pd.read_parquet(DF_PROC_PATH)
+df = pd.read_parquet(FILE_DATA_PROCESSED)
 
 ref = df[df["TARGET"].notnull()][["SK_ID_CURR"] + FEATURES]
 ref.to_parquet(DIR_DATA_PROCESSED / "reference.parquet", index=False)

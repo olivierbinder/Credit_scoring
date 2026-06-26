@@ -16,7 +16,7 @@ import requests
 import streamlit as st
 from scipy.stats import gaussian_kde
 
-from credit_scoring.serving.constants import (
+from credit_scoring.config import (
     CATEGORICAL_FEATURES,
     EDUCATION_INVERSE,
     EDUCATION_OPTIONS,
@@ -66,7 +66,7 @@ def load_reference_data():
 REFERENCE_DF = load_reference_data()
 
 
-# %%          .          PLOTTING HELPERS           .
+# %%  PLOTTING HELPERS                                                                 .
 
 
 def get_reference_series(feature_name):

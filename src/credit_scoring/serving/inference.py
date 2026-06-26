@@ -12,8 +12,8 @@ from pydantic import BaseModel, Field
 from credit_scoring.config import (
     EDUCATION_MAP,
     GENDER_MAP,
-    PROD_MODEL_PATH,
-    REF_DB_PATH,
+    PROD_MODEL,
+    PROD_REFERENCE,
 )
 from credit_scoring.logger import logger
 
@@ -27,9 +27,9 @@ _threshold = None
 def get_model():
     global _model, _features, _threshold
     if _model is None:
-        _model = mlflow.lightgbm.load_model(PROD_MODEL_PATH)
+        _model = mlflow.lightgbm.load_model(PROD_MODEL)
         _features = _model.feature_name_  # booster_.feature_name()
-        with open(PROD_MODEL_PATH / "MLmodel") as f:
+        with open(PROD_MODEL / "MLmodel") as f:
             mlmodel = yaml.safe_load(f)
         _threshold = mlmodel["metadata"]["optimal_threshold"]
         logger.info("🆗 Model loaded")
@@ -39,7 +39,7 @@ def get_model():
 def get_reference_df():
     global _reference_df
     if _reference_df is None:
-        _reference_df = pd.read_parquet(REF_DB_PATH)
+        _reference_df = pd.read_parquet(PROD_REFERENCE)
     return _reference_df
 
 
