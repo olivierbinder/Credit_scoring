@@ -1,6 +1,4 @@
-# IMPORTS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
+# %%  IMPORTS                                                                          .
 import numpy as np
 import pandas as pd
 from catboost import CatBoostClassifier
@@ -30,8 +28,7 @@ SUPPORTS_EVAL_SET = {"lightgbm", "xgboost"}
 SUPPORTS_SAMPLE_WEIGHT = {"lightgbm", "log_reg", "random_forest"}
 
 
-# TRAIN FUNCTION
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  TRAIN FUNCTION                                                                   .
 @timer
 def train_model(
     model_type: str,
@@ -53,8 +50,7 @@ def train_model(
     return model
 
 
-# CROSS VALIDATION
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  CROSS VALIDATION                                                                 .
 def business_cost_scorer(y_true, y_pred):
     """Calculate average business cost"""
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()

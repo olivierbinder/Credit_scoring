@@ -28,5 +28,9 @@ FEATURES = [
 
 
 df = pd.read_parquet(DF_PROC_PATH)
-ref = df[["SK_ID_CURR"] + FEATURES]
+
+ref = df[df["TARGET"].notnull()][["SK_ID_CURR"] + FEATURES]
 ref.to_parquet(DIR_DATA_PROCESSED / "reference.parquet", index=False)
+
+new = df[df["TARGET"].isnull()][["SK_ID_CURR"] + FEATURES]
+new.to_parquet(DIR_DATA_PROCESSED / "new.parquet", index=False)

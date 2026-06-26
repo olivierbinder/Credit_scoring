@@ -1,6 +1,6 @@
 # src/credit_scoring/serving/inference.py
-# IMPORTS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  IMPORTS                                                                          .
+
 from typing import Literal
 
 import mlflow
@@ -9,15 +9,15 @@ import pandas as pd
 import yaml
 from pydantic import BaseModel, Field
 
-from credit_scoring.config import PROD_MODEL_PATH, REF_DB_PATH
-from credit_scoring.logger import logger
-from credit_scoring.serving.constants import (
+from credit_scoring.config import (
     EDUCATION_MAP,
     GENDER_MAP,
+    PROD_MODEL_PATH,
+    REF_DB_PATH,
 )
+from credit_scoring.logger import logger
 
-# MODEL ARTIFACTS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  ARTIFACTS                                                                        .
 _model = None
 _features = None
 _reference_df = None
@@ -43,8 +43,7 @@ def get_reference_df():
     return _reference_df
 
 
-# INPUT SCHEMA
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  INPUT SCHEMA                                                                  .
 class CreditScoringInput(BaseModel):
     # External scores
     EXT_SOURCE_1: float | None = Field(None, ge=0, le=1)
@@ -91,8 +90,7 @@ class CreditScoringInput(BaseModel):
     CC_CNT_DRAWINGS_CURRENT_VAR: float | None = Field(None, ge=0)
 
 
-# FEATURE TRANSFORMATIONS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  FEATURE TRANSFORMATIONS                                                          .
 def encode(input_data: CreditScoringInput) -> dict:
     features = input_data.model_dump()
 
@@ -102,8 +100,7 @@ def encode(input_data: CreditScoringInput) -> dict:
     return features
 
 
-# DATA ACCESS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  DATA ACCESS                                                          .
 def lookup(sk_id: int) -> dict | None:
     reference = get_reference_df()
     row = reference.loc[reference["SK_ID_CURR"] == sk_id]
@@ -117,8 +114,7 @@ def lookup(sk_id: int) -> dict | None:
     }
 
 
-# INFERENCE
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  INFERENCE                                                          .
 def predict(
     input_data: CreditScoringInput,
 ) -> dict:

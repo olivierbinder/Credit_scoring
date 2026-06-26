@@ -1,3 +1,4 @@
+# %%  IMPORTS                                                                          .
 import mlflow
 import mlflow.lightgbm
 import pandas as pd
@@ -9,12 +10,14 @@ from credit_scoring.config import DF_PROC_PATH
 from credit_scoring.features.preprocess import select_important_features
 from credit_scoring.models.train import business_cost_scorer
 
-# --- CONFIGURATION ---
+# %%  CONFIGURATION                                                                    .
 MODEL_URI = "models:/LightGBM_20features/1"
 TRACKING_URI = "sqlite:///mlflow.db"
 EXPERIMENT_NAME = "Credit_Scoring_FineTuning"
 FEATURES_TO_SELECT = 20
 
+
+# %%  XXX                                                                  .
 # 1. Chargement du modèle de base
 print("Chargement du modèle depuis le registre...")
 base_model = mlflow.lightgbm.load_model(MODEL_URI)

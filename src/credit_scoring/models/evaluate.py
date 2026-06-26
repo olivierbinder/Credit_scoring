@@ -1,5 +1,4 @@
-# IMPORTS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  IMPORTS                                                                          .
 import matplotlib.pyplot as plt
 import mlflow
 from sklearn.metrics import (
@@ -17,8 +16,7 @@ from credit_scoring.logger import logger
 from credit_scoring.utils import timer
 
 
-# EVALUATION FUNCTIONS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  EVALUATION FUNCTIONS                                                             .
 def compute_business_cost(y_true, y_pred, cost_fn=10, cost_fp=1):
     """Calculate average business cost per sample (normalized)."""
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
@@ -76,8 +74,7 @@ def generate_and_log_plots(model, X, y, y_pred, dataset_name, threshold=0.5):
     plt.close(fig_roc)
 
 
-# MAIN FUNCTION
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  MAIN FUNCTION                                                                    .
 def evaluate_and_log(model, X, y, dataset_name, threshold=0.5):
     y_proba = model.predict_proba(X)[:, 1]
     y_pred = (y_proba >= threshold).astype(int)

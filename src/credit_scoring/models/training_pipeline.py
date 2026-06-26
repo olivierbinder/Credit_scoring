@@ -26,9 +26,8 @@ Requirements:
     - Data sources must be available in the defined paths.
     - Environment variables must be set for CI/CD integration.
 """
+# %%  IMPORTS                                                                          .
 
-# IMPORTS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
 import argparse
 import datetime
 import gc
@@ -69,8 +68,7 @@ from credit_scoring.models.train import (
     train_model,
 )
 
-# SETTINGS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  SETTINGS                                                                         .
 # Suppress log pollution and framework warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="mlflow")
 warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
@@ -80,8 +78,7 @@ pd.set_option("display.max_columns", 50)
 pd.set_option("display.max_rows", 50)
 
 
-# YAML EXPERIMENT CONFIG PARSING
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  YAML EXPERIMENT CONFIG PARSING                                                   .
 class ExperimentConfig(BaseModel):
     name: str
     model: str
@@ -109,8 +106,7 @@ def load_experiment_config(config_path: Path) -> ExperimentConfig:
     return cfg
 
 
-# MAIN EXPERIMENT FUNCTION
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  MAIN EXPERIMENT FUNCTION                                                         .
 def run_experiment(
     config_path: Path = DIR_CONFIG / "training.yaml",
     load_raw_data=False,
@@ -133,8 +129,7 @@ def run_experiment(
     logger.info(f"ℹ️ Run Feature Importance: {run_feat_imp}")
     logger.info(f"ℹ️ Run SHAP: {run_shap}")
 
-    # Load and Process Data, or load processed data
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+    # !! Load and Process Data / load processed data.
     if load_raw_data is False:
         logger.info(msg="✅ Loading processed data from cache")
         df = pd.read_parquet(DF_PROC_PATH)
@@ -163,9 +158,7 @@ def run_experiment(
     del train_df
     gc.collect()
 
-    # Feature selection
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-
+    # !! Feature selection.
     if "importan" in cfg.ft_selection.lower():
         logger.info(msg="✅ Filtering important features")
         X = select_important_features(X, 20)
@@ -173,9 +166,7 @@ def run_experiment(
             f"🆗 Features selection : (shape = {X.shape[0]:,d} | {X.shape[1]:,d})"
         )
 
-    # Split Data
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-
+    # !! Split Data.
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
@@ -186,14 +177,13 @@ def run_experiment(
     del X, y
     gc.collect()
 
-    # Train Model
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+    # !! Experiment.
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     mlflow.set_experiment(cfg.name)
     with mlflow.start_run(run_name=cfg.run):
         logger.info("✅ Starting MLFlow run")
 
-        # 1. Log Metadata
+        # !! Logging.
         mlflow.set_tag("data_loading", cfg.data_loading)
         mlflow.set_tag("feature_engineering", cfg.ft_engineering)
         mlflow.set_tag("feature_selection", cfg.ft_selection)
@@ -202,7 +192,7 @@ def run_experiment(
         mlflow.set_tag("nb_rows_train", X_train.shape[0])
         mlflow.log_params(cfg.model_params)
 
-        # 2. Cross-Validation
+        # !! Cross-Validation.
         if run_cv:
             logger.info("✅ Running Cross-Validation")
             cv_results = run_cross_validation(
@@ -217,7 +207,7 @@ def run_experiment(
                 mlflow.log_metric(f"cv_{metric}_mean", round(float(np.mean(scores)), 4))
                 mlflow.log_metric(f"cv_{metric}_std", round(float(np.std(scores)), 4))
 
-        # 3. Training
+        # !! Training.
         logger.info("✅ Training model")
 
         model = train_model(
@@ -231,16 +221,14 @@ def run_experiment(
         optimal_threshold = optimize_threshold(model, X_test, y_test)
         mlflow.log_param("evaluation_threshold", optimal_threshold)
 
-        # Evaluate Model
-        # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+        # !! Evaluation.
         logger.info("✅ Evaluating model")
         evaluate_and_log(model, X_test, y_test, "test", optimal_threshold)
         evaluate_and_log(model, X_train, y_train, "train", optimal_threshold)
 
         mlflow.set_tag("nb_rows_test", X_test.shape[0])
 
-        # Explain Model
-        # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+        # !! Explanation.
         feature_names = X_train.columns.tolist()
         mlflow.log_dict(feature_names, "features.json")
 
@@ -255,8 +243,7 @@ def run_experiment(
                 max_features=25,
             )
 
-        # Log model
-        # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+        # !! Logging.
         logger.info("✅ Logging model")
         artifact_name = (
             cfg.model
@@ -287,8 +274,7 @@ def run_experiment(
 
         logger.info(f"🆗 Model '{cfg.model}' logged to MLflow.")
 
-        # Generate Predictions for Kaggle
-        # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+        # !! Generate Predictions for Kaggle.
         if kaggle:
             logger.info("✅ Generating Kaggle predictions")
             X_kaggle = test_df[feature_names]
@@ -302,8 +288,7 @@ def run_experiment(
             logger.info("🆗 Kaggle predictions generated")
 
 
-# ARGUMENT PARSING
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  ARGUMENT PARSING                                                                 .
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Run credit scoring training experiment."
@@ -335,8 +320,7 @@ def parse_args():
     return parser.parse_args()
 
 
-# MAIN
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  MAIN                                                                             .
 if __name__ == "__main__":
     args = parse_args()
 

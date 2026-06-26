@@ -1,6 +1,7 @@
 # src/credit_scoring/serving/constants.py
-# REFERENCE DATA
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+
+# %%  REFERENCE DATA                                                                   .
+
 FEATURE_LABELS = {
     "EXT_SOURCE_1": "External Score 1",
     "EXT_SOURCE_2": "External Score 2",
@@ -54,15 +55,13 @@ FEATURE_GROUPS = {
 }
 
 
-# CATEGORICAL ENCODING
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  CATEGORICAL ENCODING                                                             .
+
 
 CATEGORICAL_FEATURES = {
     "CODE_GENDER",
     "NAME_EDUCATION_TYPE",
 }
-
-
 # Education Options for SelectBoxes
 EDUCATION_OPTIONS = [
     "Lower secondary",
@@ -71,19 +70,3 @@ EDUCATION_OPTIONS = [
     "Higher education",
     "Academic degree",
 ]
-
-GENDER_MAP = {
-    "M": 1.0,
-    "F": 0.0,
-}
-
-EDUCATION_MAP = {
-    "Lower secondary": 0.0,
-    "Secondary / secondary special": 1.0,
-    "Incomplete higher": 2.0,
-    "Higher education": 3.0,
-    "Academic degree": 4.0,
-}
-
-GENDER_INVERSE = {v: k for k, v in GENDER_MAP.items()}
-EDUCATION_INVERSE = {v: k for k, v in EDUCATION_MAP.items()}

@@ -26,7 +26,8 @@ dependencies = [
     "requests>=2.32.0",
     # experiment tracking
     "mlflow>=3.12.0",
-
+    "evidently>=0.4.36",
+    "rich>=15.0.0",
 ]
 
 

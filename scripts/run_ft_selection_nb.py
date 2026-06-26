@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from credit_scoring.pipelines.feature_selection import (
+from credit_scoring.features.feature_selection import (
     evaluate_feature_subsets,
 )
 

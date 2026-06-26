@@ -1,5 +1,4 @@
-# IMPORTS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  IMPORTS                                                                          .
 
 import gc
 import re
@@ -32,8 +31,7 @@ from credit_scoring.logger import logger
 from credit_scoring.utils import timer
 
 
-# LOAD FUNCTION
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  LOAD FUNCTION                                                                    .
 def load_data(file: Path, num_rows: int | None = None) -> pd.DataFrame:
     """Load a single CSV file and print its shape."""
     df = pd.read_csv(file, nrows=num_rows)
@@ -41,18 +39,15 @@ def load_data(file: Path, num_rows: int | None = None) -> pd.DataFrame:
     return df
 
 
-# PREPROCESSING APPS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  PREPROCESSING APPS                                                               .
 @timer
 def preprocess_apps(apps):
     # Cleaning
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     df = apps.copy()
     df = df[df["CODE_GENDER"] != "XNA"]
     df["DAYS_EMPLOYED"] = df["DAYS_EMPLOYED"].replace(365243, np.nan)
 
     # Categorical features
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     col_cat_edu_order = [
         "Lower secondary",
         "Secondary / secondary special",
@@ -92,7 +87,6 @@ def preprocess_apps(apps):
     )
 
     # Column Transformer
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     preprocessor = ColumnTransformer(
         transformers=[
             ("cat_edu", cat_edu_pipe, edu_col),
@@ -108,7 +102,6 @@ def preprocess_apps(apps):
     df_proc = pd.DataFrame(transformed_data, columns=feature_names, index=df.index)
 
     # Ratios
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     df_proc["DAYS_EMPLOYED_PERC"] = df_proc["DAYS_EMPLOYED"] / df_proc["DAYS_BIRTH"]
     df_proc["INCOME_CREDIT_PERC"] = df_proc["AMT_INCOME_TOTAL"] / df_proc["AMT_CREDIT"]
     df_proc["INCOME_PER_PERSON"] = (
@@ -122,12 +115,10 @@ def preprocess_apps(apps):
     return df_proc
 
 
-# PREPROCESS BUREAU
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  PREPROCESS BUREAU                                                                .
 @timer
 def preprocess_bureau(bureau, bb):
     # Encoding setup
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     cat_cols_bb = bb.select_dtypes(include=["object"]).columns.tolist()
     cat_cols_bur = bureau.select_dtypes(include=["object"]).columns.tolist()
 
@@ -164,7 +155,6 @@ def preprocess_bureau(bureau, bb):
     )
 
     # Bureau Balance Aggregation
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     bb_agg = bb_enc.groupby("SK_ID_BUREAU").agg(
         {
             **{"MONTHS_BALANCE": ["min", "max", "size"]},
@@ -184,7 +174,6 @@ def preprocess_bureau(bureau, bb):
     gc.collect()
 
     # Bureau Aggregations
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     num_aggs = {
         "DAYS_CREDIT": ["min", "max", "mean", "var"],
         "DAYS_CREDIT_ENDDATE": ["min", "max", "mean"],
@@ -212,7 +201,6 @@ def preprocess_bureau(bureau, bb):
     bureau_agg.columns = [f"BURO_{e[0]}_{e[1].upper()}" for e in bureau_agg.columns]
 
     # Active/Closed Splits
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     for status in ["Active", "Closed"]:
         subset = bureau[bureau[f"CREDIT_ACTIVE_{status}"] == 1]
         sub_agg = subset.groupby("SK_ID_CURR").agg(num_aggs)
@@ -226,13 +214,11 @@ def preprocess_bureau(bureau, bb):
     return bureau_agg
 
 
-# PREPROCESSING OF PREVIOUS APPLICATIONS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  PREPROCESSING OF PREVIOUS APPLICATIONS                                           .
 @timer
 def preprocess_previous_applications(prev):
     prev = prev.drop(columns=["SK_ID_PREV"])
     # Cleaning & Feature Engineering
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     days_cols = [
         "DAYS_FIRST_DRAWING",
         "DAYS_FIRST_DUE",
@@ -245,7 +231,6 @@ def preprocess_previous_applications(prev):
     prev["APP_CREDIT_PERC"] = prev["AMT_APPLICATION"] / prev["AMT_CREDIT"]
 
     # Encoding
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     cat_cols = prev.select_dtypes(include=["object"]).columns.tolist()
     ohe = ColumnTransformer(
         [
@@ -264,7 +249,6 @@ def preprocess_previous_applications(prev):
     )
 
     # Aggregations
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     num_aggs = {
         "AMT_ANNUITY": ["min", "max", "mean"],
         "AMT_APPLICATION": ["min", "max", "mean"],
@@ -411,8 +395,7 @@ def sanitize_feature_names(names) -> list[str]:
     return [c.strip("_") for c in clean]
 
 
-# MAIN PREPROCESSING FUNCTION
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  MAIN PREPROCESSING FUNCTION                                                      .
 def load_and_preprocess_all(num_rows):
     """Load, preprocess, and merge all datasets into a single dataframe."""
     apps_train = load_data(FILE_APP_TRAIN, num_rows)
@@ -464,8 +447,7 @@ def load_and_preprocess_all(num_rows):
     return df
 
 
-# FEATURE SELECTION
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  FEATURE SELECTION                                                                .
 def select_important_features(df, n=20):
     ft = pd.read_csv(DIR_DATA / "feature_selection" / "feature_ranking.csv")
     top_features = ft["feature"].head(n).tolist()

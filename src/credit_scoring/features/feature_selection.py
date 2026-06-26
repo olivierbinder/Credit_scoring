@@ -1,3 +1,4 @@
+# %%  IMPORTS                                                                          .
 from pathlib import Path
 
 import numpy as np
@@ -16,6 +17,7 @@ from credit_scoring.models.train import (
 from credit_scoring.models.training_pipeline import load_experiment_config
 
 
+# %%  FEATURE RANKING                                                                  .
 def build_robust_feature_ranking(
     config_path: Path = DIR_CONFIG / "training.yaml",
     n_splits: int = 5,
@@ -34,28 +36,18 @@ def build_robust_feature_ranking(
     cfg = load_experiment_config(config_path)
     print(f"ℹ️ Model: {cfg.model}\n")
 
-    # ------------------------------------------------------------------
     # Load data
-    # ------------------------------------------------------------------
-
     df = pd.read_parquet(DF_PROC_PATH)
-
     train_df = df[df["TARGET"].notnull()].copy()
-
     X = train_df.drop(columns=["TARGET", "SK_ID_CURR"])
     y = train_df["TARGET"]
-
     features = X.columns.tolist()
 
-    # ------------------------------------------------------------------
     # Storage
-    # ------------------------------------------------------------------
 
     all_importances = []
 
-    # ------------------------------------------------------------------
     # Loop
-    # ------------------------------------------------------------------
 
     for seed in seeds:
         cv = StratifiedKFold(
@@ -90,9 +82,7 @@ def build_robust_feature_ranking(
 
             all_importances.append(fold_importance)
 
-    # ------------------------------------------------------------------
     # Aggregate
-    # ------------------------------------------------------------------
 
     imp_df = pd.concat(all_importances, ignore_index=True)
 
@@ -126,6 +116,7 @@ def build_robust_feature_ranking(
     return ranking_df
 
 
+# %%  EVALUATION                                                                       .
 def evaluate_feature_subsets(
     ranking_path: Path,
     min_features: int = 3,
@@ -140,15 +131,11 @@ def evaluate_feature_subsets(
     pd.DataFrame
     """
 
-    # ------------------------------------------------------------
     # Load config
-    # ------------------------------------------------------------
 
     cfg = load_experiment_config(DIR_CONFIG / "training.yaml")
 
-    # ------------------------------------------------------------
     # Load data
-    # ------------------------------------------------------------
 
     df = pd.read_parquet(DF_PROC_PATH)
 
@@ -158,9 +145,7 @@ def evaluate_feature_subsets(
 
     y = train_df["TARGET"]
 
-    # ------------------------------------------------------------
     # Train / Test split
-    # ------------------------------------------------------------
 
     X_train_full, X_test_full, y_train, y_test = train_test_split(
         X,
@@ -170,17 +155,13 @@ def evaluate_feature_subsets(
         stratify=y,
     )
 
-    # ------------------------------------------------------------
     # Ranking
-    # ------------------------------------------------------------
 
     ranking = pd.read_csv(ranking_path)
 
     ordered_features = ranking["feature"].tolist()
 
-    # ------------------------------------------------------------
     # Loop
-    # ------------------------------------------------------------
 
     results = []
 
