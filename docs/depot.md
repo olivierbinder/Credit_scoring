@@ -1,74 +1,72 @@
-# Structure du dépôt GitHub
+# Structure du dépôt
 
 ## Objectif
 
-Cette partie sert à montrer rapidement l'organisation du code et les fichiers importants pour le déploiement MLOps.
+Montrer que le projet est organisé comme une application ML maintenable :
 
-## Structure générale
+- code métier dans `src/credit_scoring` ;
+- jobs ponctuels dans `scripts` ;
+- configuration dans `config` ;
+- documentation dans `docs` ;
+- workflows dans `.github/workflows`.
+
+## Vue générale
 
 ```text
 credit-scoring/
-├── src/
-│   └── credit_scoring/
-│       ├── config.py
-│       ├── serving/
-│       │   ├── api.py
-│       │   └── inference.py
-│       ├── preprocessing/
-│       ├── training/
-│       └── monitoring/
-├── reports/
-│   ├── drift_report.html
-│   └── quality_report.html
-├── tests/
-├── docs/
-├── Dockerfile
-├── pyproject.toml
-├── README.md
-└── .github/
-    └── workflows/
+|-- config/
+|   `-- training.yaml
+|-- docs/
+|-- scripts/
+|-- src/credit_scoring/
+|   |-- features/
+|   |-- models/
+|   |-- serving/
+|   `-- interfaces/
+|-- tests/
+|-- Dockerfile
+|-- Justfile
+|-- pyproject.toml
+|-- zensical.toml
+`-- .github/workflows/
 ```
+
+## Dossiers principaux
+
+| Dossier | Rôle |
+|---|---|
+| `features/` | Préprocessing et sélection de features |
+| `models/` | Training, tuning, évaluation, explainability |
+| `serving/` | API, inference, modèle packagé, fichiers de référence |
+| `interfaces/` | Application Streamlit multi-pages |
+| `scripts/` | Jobs ponctuels : ONNX, base inference, feature selection |
+| `docs/` | Support Zensical de soutenance |
 
 ## Fichiers clés
 
-| Fichier | Rôle |
-|---|---|
-| `src/credit_scoring/serving/api.py` | API FastAPI |
-| `src/credit_scoring/serving/inference.py` | Chargement modèle et prédiction |
-| `src/credit_scoring/config.py` | Chemins, mappings, constantes |
-| `Dockerfile` | Image de déploiement |
-| `pyproject.toml` | Dépendances Python et groupes dev/ci |
-| `.github/workflows/...` | Pipeline CI/CD |
-| `README.md` | Documentation principale du projet |
-| `reports/` | Rapports générés par le monitoring |
+- `config/training.yaml` : modèle choisi, paramètres et options training.
+- `src/credit_scoring/config.py` : chemins, features finales et mappings.
+- `src/credit_scoring/serving/api.py` : routes FastAPI et logging.
+- `src/credit_scoring/serving/inference.py` : chargement modèle et prédiction.
+- `src/credit_scoring/interfaces/app_streamlit.py` : entrée Streamlit.
+- `Dockerfile` : image de déploiement.
+- `Justfile` : commandes locales utiles.
+- `.github/workflows/ci.yml` : lint et tests.
+- `.github/workflows/cd.yml` : déploiement Hugging Face.
 
-## Dockerfile
+## Justfile
 
-Le Dockerfile permet de construire une image reproductible contenant :
+Le `Justfile` sert de façade simple pour les commandes courantes :
 
-- l'application ;
-- les dépendances ;
-- le modèle ;
-- la commande de lancement.
+- `just api` ;
+- `just dashboard` ;
+- `just app` ;
+- `just train` ;
+- `just export-onnx` ;
+- `just test`.
 
-## Configuration Python
+## Message clé
 
-Le projet utilise :
-
-- Python 3.12 ;
-- `uv` pour la gestion des dépendances ;
-- `pytest` pour les tests ;
-- `ruff` pour la qualité du code.
-
-## Documentation
-
-La documentation Zensical est stockée dans le dossier `docs/`.
-
-Elle permet de présenter :
-
-- le contexte ;
-- le monitoring ;
-- les optimisations ;
-- la démo API ;
-- la CI/CD ;
-- la structure du dépôt.
+Le dépôt sépare la logique réutilisable du package Python et les scripts
+d'orchestration ponctuels. Cette séparation rend le projet plus lisible pour la
+soutenance et plus maintenable.

@@ -1,82 +1,67 @@
-# Déroulé de démonstration pour la soutenance
+# Déroulé de démonstration
 
-## 1. Présenter le contexte
+## 1. Introduire le projet
 
-Expliquer rapidement :
+- Problème métier : prédire un risque de défaut.
+- Objectif MLOps : passer d'un modèle à une application déployée.
+- Périmètre : modèle final, API, interface, monitoring, CI/CD.
 
-- le problème métier : prédire le risque de défaut ;
-- le modèle utilisé ;
-- le passage d'un notebook à un service déployé ;
-- l'objectif MLOps : rendre le modèle exploitable, monitoré et déployable.
+Phrase utile :
 
-## 2. Montrer l'application Streamlit
+> Le projet ne présente pas seulement un score, mais une mini-chaîne de mise en
+> production : servir, observer et redéployer le modèle.
 
-Dans Streamlit, parcourir les trois onglets principaux :
+## 2. Conception du modèle
 
-1. **Supervision de l'API** : latence, erreurs, volume de requêtes.
-2. **Surveillance de la dérive** : rapports Evidently.
-3. **Optimisation de l'inférence** : profiling et benchmark ONNX.
+- Montrer les sources de données.
+- Expliquer les agrégations historiques au niveau client.
+- Expliquer la réduction à 20 features.
+- Mentionner MLflow et le seuil optimisé.
 
-## 3. Démontrer l'API
+## 3. API FastAPI
 
-Faire un appel à `/predict` avec une requête JSON.
+- Ouvrir Swagger sur `/docs`.
+- Montrer `/model-info`.
+- Montrer `/lookup/{sk_id}`.
+- Tester ou expliquer `/predict`.
+- Montrer le format d'erreur avec `request_id`.
 
-Montrer :
+## 4. Application Prédiction
 
-- le score de défaut ;
-- la décision associée ;
-- le fait que l'appel est ensuite journalisé dans les logs.
+- Charger un client.
+- Montrer les groupes de features.
+- Modifier une valeur simple.
+- Montrer les distributions de référence.
+- Lancer la prédiction et commenter la jauge.
 
-## 4. Montrer le monitoring
+## 5. Application Monitoring
 
-Afficher :
+- Onglet API :
+  - routes métier uniquement ;
+  - volume, erreurs et latence.
+- Onglet dérive :
+  - rapport Evidently ;
+  - qualité des données.
+- Onglet optimisation :
+  - profiling ;
+  - benchmark LightGBM vs ONNX.
 
-- le rapport de dérive ;
-- le rapport qualité ;
-- les logs API ;
-- les métriques de latence et d'erreurs.
+## 6. CI/CD et déploiement
 
-Phrase possible :
+- Montrer `ci.yml` : Ruff et Pytest.
+- Montrer `cd.yml` : déclenchement après CI verte sur `main`.
+- Montrer le checkout Git LFS.
+- Montrer le push vers Hugging Face Spaces.
+- Ouvrir le Space déployé.
 
-> Le monitoring permet de vérifier que les données en production restent proches des données de référence et que l'API reste stable en termes de latence et d'erreurs.
+## 7. Conclusion
 
-## 5. Montrer l'optimisation
-
-Afficher :
-
-- le profiling ;
-- le benchmark LightGBM vs ONNX ;
-- le gain sur la latence moyenne ;
-- le P95 et le P99.
-
-Phrase possible :
-
-> Le profiling met en évidence le coût du chemin d'inférence complet. La conversion ONNX permet de réduire le surcoût Python et d'améliorer concrètement la latence.
-
-## 6. Montrer le dépôt GitHub
-
-Naviguer rapidement dans :
-
-- `src/credit_scoring/serving/api.py` ;
-- `src/credit_scoring/serving/inference.py` ;
-- `Dockerfile` ;
-- `.github/workflows/` ;
-- `pyproject.toml` ;
-- `README.md`.
-
-## 7. Montrer la CI/CD
-
-Faire ou montrer un commit récent.
-
-Puis afficher :
-
-- le déclenchement GitHub Actions ;
-- les tests ;
-- la construction Docker ;
-- le déploiement Hugging Face Spaces.
-
-## Conclusion
+- Le modèle est utilisable via API et interface.
+- L'application permet de tester des scénarios client.
+- Le monitoring donne une visibilité sur API, données et performance.
+- Le déploiement est automatisé après validation.
 
 Message final :
 
-> Le projet couvre une chaîne MLOps complète : modèle exposé via API, déploiement Docker, monitoring des données et de l'API, optimisation de l'inférence, et CI/CD pour automatiser la livraison.
+> La valeur du projet est dans la chaîne complète : modèle, service, interface,
+> observabilité et livraison automatisée.

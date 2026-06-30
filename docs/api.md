@@ -1,75 +1,66 @@
-# Démonstration de l'API déployée
+# API FastAPI
 
-## Objectif
+## Rôle de l'API
 
-Cette partie démontre que le modèle est bien exposé via une API et qu'il peut être appelé comme un service de prédiction.
+- Exposer le modèle comme un service.
+- Valider les entrées avec Pydantic.
+- Retourner une probabilité et une décision.
+- Journaliser les appels pour alimenter le monitoring.
+- Documenter les routes et les erreurs dans Swagger.
 
 ## Routes principales
 
 | Route | Méthode | Rôle |
 |---|---:|---|
 | `/` | GET | Health check |
-| `/model-info` | GET | Retourne le seuil du modèle |
-| `/lookup/{sk_id}` | GET | Récupère les features d'un client |
-| `/predict` | POST | Retourne le score de défaut |
+| `/model-info` | GET | Seuil optimisé du modèle |
+| `/lookup/{sk_id}` | GET | Features d'un client connu |
+| `/reference` | GET | Données de référence en parquet |
+| `/predict` | POST | Score et décision de défaut |
 
-## Health check
+## Schéma d'appel
 
-```bash
-curl https://<url-space-huggingface>/
+```mermaid
+sequenceDiagram
+    participant UI as Streamlit
+    participant API as FastAPI
+    participant M as Modèle
+    participant L as Logs
+
+    UI->>API: GET /lookup/{sk_id}
+    API-->>UI: Features client
+    UI->>API: POST /predict
+    API->>M: predict_proba
+    API->>L: log prediction + métriques
+    API-->>UI: probability + prediction
 ```
 
-Réponse attendue :
+## Gestion des erreurs
+
+- Les erreurs HTTP utilisent un format commun.
+- Les erreurs de validation retournent un `422`.
+- Les clients absents retournent un `404`.
+- Les erreurs serveur retournent un `500` avec un `request_id`.
 
 ```json
 {
-  "status": "ok"
+  "detail": "Prediction failed",
+  "request_id": "..."
 }
 ```
 
-## Informations modèle
+## Swagger
+
+- Disponible sur `/docs`.
+- Permet de tester `/predict` directement depuis le navigateur.
+- Documente les modèles de réponse et les cas d'erreur.
+
+## Exemple de prédiction
 
 ```bash
-curl https://<url-space-huggingface>/model-info
-```
-
-Réponse attendue :
-
-```json
-{
-  "threshold": 0.42
-}
-```
-
-## Requête de prédiction
-
-Exemple de requête :
-
-```bash
-curl -X POST "https://<url-space-huggingface>/predict" \
+curl -X POST "https://<space-url>/predict" \
   -H "Content-Type: application/json" \
-  -d '{
-    "EXT_SOURCE_1": 0.31,
-    "EXT_SOURCE_2": 0.62,
-    "EXT_SOURCE_3": 0.45,
-    "AMT_ANNUITY": 25000,
-    "AMT_GOODS_PRICE": 450000,
-    "DAYS_BIRTH": -15000,
-    "DAYS_EMPLOYED": -1200,
-    "PAYMENT_RATE": 0.05,
-    "OWN_CAR_AGE": null,
-    "CODE_GENDER": "M",
-    "NAME_EDUCATION_TYPE": "Higher education",
-    "INSTAL_DPD_MEAN": 0,
-    "INSTAL_AMT_PAYMENT_SUM": 750000,
-    "POS_CNT_INSTALMENT_FUTURE_MEAN": 8,
-    "POS_SK_DPD_DEF_MEAN": 0,
-    "PREV_CNT_PAYMENT_MEAN": 12,
-    "PREV_DAYS_LAST_DUE_1ST_VERSION_MEAN": -500,
-    "ACTIVE_DAYS_CREDIT_MAX": -120,
-    "CC_CNT_DRAWINGS_ATM_CURRENT_MEAN": 0,
-    "CC_CNT_DRAWINGS_CURRENT_VAR": 0
-  }'
+  -d '{"EXT_SOURCE_2": 0.62, "...": "..."}'
 ```
 
 Réponse attendue :
@@ -81,12 +72,10 @@ Réponse attendue :
 }
 ```
 
-## Points à montrer en soutenance
+## Points à montrer
 
-Pendant la démo :
-
-1. ouvrir l'URL de l'API ;
-2. montrer le health check ;
-3. envoyer une requête `/predict` ;
-4. montrer la réponse JSON ;
-5. vérifier que l'appel apparaît ensuite dans les logs de monitoring.
+- Ouvrir `/docs` et montrer Swagger.
+- Appeler `/model-info`.
+- Appeler `/lookup/{sk_id}`.
+- Faire une prédiction.
+- Vérifier ensuite que l'appel apparaît dans l'onglet monitoring.

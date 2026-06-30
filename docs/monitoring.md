@@ -1,101 +1,79 @@
-# Monitoring : dérive, logs et performance
+# Application Monitoring
 
-## Objectif du monitoring
+## Objectif
 
-Le monitoring permet de vérifier que le modèle reste fiable après son déploiement.
+- Suivre le comportement de l'API.
+- Vérifier la stabilité des données.
+- Mesurer le coût d'inférence.
+- Comparer le modèle standard avec la version ONNX.
 
-Deux dimensions sont suivies :
+L'onglet **Pilotage** de Streamlit centralise ces vues.
 
-1. **Dérive des données** : les données reçues en production restent-elles proches des données de référence ?
-2. **Fiabilité de l'API** : l'API répond-elle correctement, rapidement et sans erreur ?
+## 1. Supervision de l'API
 
-## Dérive des données
+- Les appels HTTP sont loggés dans `logs/api_calls.jsonl`.
+- Le dashboard filtre les routes métier :
+  - `/lookup/{sk_id}` ;
+  - `/model-info` ;
+  - `/predict` ;
+  - `/reference`.
+- Les routes techniques comme `/docs` ou `/openapi.json` sont masquées.
 
-La dérive des données est analysée avec **Evidently** à partir de deux datasets :
+Indicateurs affichés :
 
-- `PROD_REFERENCE` : données de référence ;
-- `PROD_TEST` : données simulées ou observées en production.
+| Indicateur | Rôle |
+|---|---|
+| Latence moyenne | Temps moyen par route |
+| Nb erreurs | Nombre de réponses HTTP en erreur |
+| Volume | Nombre d'appels |
+| Courbe de latence | Evolution temporelle par route |
 
-Les rapports générés sont :
+## 2. Dérive et qualité des données
 
-- `reports/drift_report.html` : rapport de dérive ;
-- `reports/quality_report.html` : résumé qualité des données.
+- Les rapports sont générés avec **Evidently**.
+- La référence est `serving/db/reference.parquet`.
+- Les données de comparaison sont `serving/db/test.parquet`.
+- Les variables catégorielles sont décodées avant affichage.
 
-## Variables suivies
+Rapports disponibles :
 
-Le monitoring se concentre sur les 20 variables finales du modèle :
+- `reports/drift_report.html` ;
+- `reports/quality_report.html`.
 
-- scores externes ;
-- profil du demandeur ;
-- caractéristiques du prêt ;
-- historique de remboursement ;
-- historique de crédit ;
-- activité carte de crédit.
+## 3. Profiling d'inférence
 
-Les variables catégorielles encodées sont remappées avant affichage afin de rendre les rapports lisibles :
+- L'application lance 50 inférences sur un exemple de référence.
+- `cProfile` identifie les fonctions les plus coûteuses.
+- Le résultat est affiché sous forme de tableau.
 
-```python
-GENDER_INVERSE = {
-    1.0: "M",
-    0.0: "F",
-}
+Points observés :
 
-EDUCATION_INVERSE = {
-    0.0: "Lower secondary",
-    1.0: "Secondary / secondary special",
-    2.0: "Incomplete higher",
-    3.0: "Higher education",
-    4.0: "Academic degree",
-}
+- coût des conversions `pandas` ;
+- coût des appels modèle ;
+- coût du chemin d'inférence complet, pas seulement `predict_proba`.
+
+## 4. Benchmark LightGBM vs ONNX
+
+```mermaid
+flowchart LR
+    A[Features client] --> B[DataFrame pandas]
+    B --> C[LightGBM standard]
+    B --> D[Tableau float32]
+    D --> E[ONNX Runtime]
+    C --> F[Latence moyenne]
+    E --> F
 ```
 
-## Logs API
+Métriques affichées :
 
-Chaque appel HTTP est journalisé par un middleware FastAPI.
+- latence moyenne ;
+- P95 ;
+- P99 ;
+- accélération moyenne ;
+- ordre de grandeur théorique en inférences/seconde.
 
-Les informations collectées sont notamment :
+## Message clé
 
-| Champ | Rôle |
-|---|---|
-| `request_id` | Identifiant unique de requête |
-| `timestamp` | Date et heure de l'appel |
-| `method` | Méthode HTTP |
-| `path` | Route appelée |
-| `status_code` | Code de réponse |
-| `latency_ms` | Latence de la requête |
-| `is_error` | Indicateur d'erreur |
-| `client_host` | Adresse du client |
-
-Ces logs alimentent l'onglet **Supervision de l'API** dans Streamlit.
-
-## Logs de prédiction
-
-Lors d'un appel à `/predict`, un second log est produit avec :
-
-- les features d'entrée ;
-- la probabilité prédite ;
-- le label de prédiction ;
-- la latence totale ;
-- le temps d'inférence ;
-- l'utilisation CPU ;
-- l'utilisation mémoire ;
-- le statut de succès ou d'erreur.
-
-## Analyse dans Streamlit
-
-L'application Streamlit affiche :
-
-- la performance par route API ;
-- le nombre d'erreurs ;
-- le volume de requêtes ;
-- l'évolution de la latence ;
-- les rapports Evidently de dérive et de qualité.
-
-## Conclusion monitoring
-
-Le monitoring permet d'identifier rapidement :
-
-- une dérive des distributions ;
-- une hausse des erreurs API ;
-- une augmentation de la latence ;
-- un problème d'intégrité ou de qualité des données.
+- Le monitoring couvre à la fois l'exploitation API et la stabilité des données.
+- Le benchmark ONNX montre une piste concrète d'optimisation de la latence.
+- Tout est visible dans l'application, sans outil externe pendant la démo.
