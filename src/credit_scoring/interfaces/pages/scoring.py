@@ -24,7 +24,7 @@ from credit_scoring.config import (
     FEATURE_LABELS,
     GENDER_INVERSE,
 )
-from credit_scoring.serving.inference import CreditScoringInput
+from credit_scoring.serving.schemas import CreditScoringInput
 
 # %% CONFIG                                                                            .
 API_BASE = "http://127.0.0.1:8000"
