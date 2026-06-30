@@ -7,59 +7,89 @@ sdk: docker
 pinned: false
 ---
 
-```mermaid
-graph LR
-    A[Code] --> B[Test]
-```
-
-# Credit Scoring – End-to-End ML Pipeline
+# Credit Scoring - ML Application
 
 ## Purpose
 
-An end-to-end machine learning solution for loan default risk prediction. This project features a modular pipeline allowing dynamic data ingestion (varying combinations of source tables), customizable feature engineering, and model selection, all deployed on Hugging Face Spaces.
+This project predicts credit default risk from Home Credit data and exposes the
+model through a small production-style stack: a FastAPI backend, a Streamlit
+application, monitoring views, and CI/CD deployment to Hugging Face Spaces.
 
-## Data & Architecture
+The current app is focused on serving and monitoring a selected production model.
+Some training options are configurable in code and YAML, but they are not exposed
+as a fully dynamic product interface.
 
-The system is built to handle three relational data sources, enabling flexible training configurations:
+## Data And Model Scope
 
-- **Apps:** Primary application data (train/test).
-- **Bureau:** External historical credit data.
-- **Previous_App:** History of past loan applications.
+The preprocessing pipeline combines the main application data with historical
+credit and previous application tables:
 
-![Data structure](https://storage.googleapis.com/kaggle-media/competitions/home-credit/home_credit.png)
+- application train/test data;
+- bureau and bureau balance history;
+- previous applications, installments, POS cash and credit card balance data.
+
+The production model currently served by the API is a LightGBM classifier using
+a reduced set of 20 selected features. The training code can instantiate several
+model families from configuration, including LightGBM, XGBoost, CatBoost, random
+forest, logistic regression and a dummy baseline.
 
 ## Key Features
 
-* **Dynamic Training Pipelines:** Users can trigger training runs using different data combinations (Apps only, Apps + Bureau, or all three sources).
-* **Modular Preprocessing:** Custom preprocessing logic and feature engineering strategies are mapped to specific data configurations.
-* **Model Agnostic:** The architecture supports training and comparing multiple model architectures (e.g., XGBoost, LightGBM, Random Forest).
-* **Robust Feature Selection:** Implemented a stability-based feature ranking strategy using repeated LightGBM training across multiple folds and random seeds. Feature importance scores are aggregated to identify consistently informative variables and reduce model complexity without significantly impacting predictive performance.
-* **MLflow Tracking:** All experiments—including data versions, hyperparameters, and model artifacts—are logged in MLflow for full reproducibility and auditing.
-* **CI/CD Integration:** Automated workflows ensure code quality and seamless deployment updates.
-* **Interactive Web UI:** Built with **Streamlit** for real-time model inference and experiment visualization.
-* **API-First Design:** Backend powered by **FastAPI** to handle heavy lifting and model inference requests.
-* **Deployment:** Fully deployed on **Hugging Face Spaces**, leveraging Docker for consistent environments.
+- **Training pipeline:** YAML-driven experiment setup with preprocessing,
+  train/test split, threshold optimisation and MLflow logging.
+- **Feature selection:** stability-oriented feature ranking using repeated
+  LightGBM importance over folds and random seeds.
+- **FastAPI serving:** prediction, client lookup, model threshold and
+  reference-data routes, with documented errors in Swagger.
+- **Streamlit scoring UI:** load a client, edit the selected model features,
+  run predictions and compare each value with the reference distribution.
+- **Streamlit monitoring UI:** API route monitoring, latency/error summaries,
+  Evidently data drift and data quality reports.
+- **Inference optimisation:** ONNX export and Streamlit benchmark comparing
+  standard LightGBM inference with ONNX Runtime.
+- **CI/CD:** GitHub Actions run Ruff and Pytest, then deploy to Hugging Face
+  Spaces after a successful CI run on `main`.
+
+## Current Limitations
+
+- The Streamlit app does not let users dynamically choose data sources or train
+  new models from the UI.
+- The deployed app serves the packaged production model and reference parquet files.
+- The broader model registry exists in training code, but the current serving
+  path is built around the selected LightGBM model.
+
+## Project Structure
+
+```text
+src/credit_scoring/
+|-- features/      # preprocessing and feature selection
+|-- models/        # training, evaluation, tuning and explainability
+|-- serving/       # FastAPI app, inference code and packaged model assets
+`-- interfaces/    # Streamlit prediction and monitoring pages
+
+scripts/
+|-- export_onnx.py
+|-- generate_base_for_inference.py
+|-- profile_inference.py
+|-- run_ft_selection_nb.py
+`-- run_ft_selection_ranking.py
+```
+
+## Main Commands
+
+```bash
+just api          # FastAPI on port 8000
+just dashboard    # Streamlit app
+just app          # API and dashboard together
+just train        # training pipeline
+just export-onnx  # export the production model to ONNX
+just test         # test suite
+```
 
 ## Tech Stack
 
-* **Frameworks:** FastAPI (Backend), Streamlit (Frontend).
-* **ML Ops:** MLflow (Experiment tracking & Model Registry).
-* **CI/CD:** GitHub Actions (Automated testing & deployment).
-* **Data Handling:** Pandas, Scikit-Learn for dynamic preprocessing.
-* **Hosting:** Hugging Face Spaces (Docker-based environment).
-
-## Pipeline Flow
-
-1. **Config Selection:** Via the UI/API, choose the data sources to include.
-2. **Dynamic Preprocessing:** The pipeline detects input sources and applies the appropriate feature engineering modules.
-3. **Training & Tracking:** Models are trained and logged via **MLflow**, tracking every iteration of the dynamic pipeline.
-4. **CI/CD Deployment:** Merging to the main branch triggers GitHub Actions, which builds the image and updates the **Hugging Face Space**.
-5. **Inference:** The FastAPI backend serves the latest model, while the Streamlit UI provides a user-friendly interface for manual testing.
-
-## Challenges & Solutions
-
-* **Data Complexity:** Managing varying schemas across 6+ CSVs was solved by implementing a centralized schema mapper.
-* **Dynamic Pipelines:** Used factory patterns to instantiate the correct feature engineering classes based on the chosen input sources.
-* **Model Explainability:** Initial feature engineering generated more than 600 variables, making business interpretation difficult. A robust feature selection framework based on repeated LightGBM importance rankings was implemented, reducing the final model to approximately 20 key variables with minimal performance degradation.
-* **Reproducibility:** MLflow was integrated to solve the "lost experiment" problem, allowing us to compare performance between different data combinations (e.g., Apps vs. Apps+Bureau).
-* **Deployment Constraints:** Optimized the Docker environment for Hugging Face Spaces to ensure fast cold-starts while handling model loading for large datasets.
+- **Backend:** FastAPI, Pydantic, Uvicorn.
+- **Frontend:** Streamlit and Plotly.
+- **ML:** Pandas, Scikit-learn, LightGBM, ONNX Runtime, MLflow.
+- **Monitoring:** API JSONL logs, Evidently reports, Streamlit dashboards.
+- **Automation:** Ruff, Pytest, GitHub Actions, Docker and Hugging Face Spaces.
