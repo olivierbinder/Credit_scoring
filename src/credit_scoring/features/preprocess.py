@@ -42,7 +42,7 @@ def load_data(file: Path, num_rows: int | None = None) -> pd.DataFrame:
 # %%  PREPROCESSING APPS                                                               .
 @timer
 def preprocess_apps(apps):
-    # Cleaning
+    # Clean raw data
     df = apps.copy()
     df = df[df["CODE_GENDER"] != "XNA"]
     df["DAYS_EMPLOYED"] = df["DAYS_EMPLOYED"].replace(365243, np.nan)
@@ -86,22 +86,22 @@ def preprocess_apps(apps):
         ]
     )
 
-    # Column Transformer
+    # Column transformer
     preprocessor = ColumnTransformer(
         transformers=[
             ("cat_edu", cat_edu_pipe, edu_col),
             ("cat_default", cat_default_pipe, other_cat_cols),
         ],
         verbose_feature_names_out=False,
-        remainder="passthrough",  # Keeps numeric columns as they are
+        remainder="passthrough",  # Keep numeric columns unchanged
     )
 
-    # Apply transformation
+    # Transform data
     transformed_data = preprocessor.fit_transform(df)
     feature_names = preprocessor.get_feature_names_out()
     df_proc = pd.DataFrame(transformed_data, columns=feature_names, index=df.index)
 
-    # Ratios
+    # Derived ratios
     df_proc["DAYS_EMPLOYED_PERC"] = df_proc["DAYS_EMPLOYED"] / df_proc["DAYS_BIRTH"]
     df_proc["INCOME_CREDIT_PERC"] = df_proc["AMT_INCOME_TOTAL"] / df_proc["AMT_CREDIT"]
     df_proc["INCOME_PER_PERSON"] = (
@@ -154,7 +154,7 @@ def preprocess_bureau(bureau, bb):
         index=bureau.index,
     )
 
-    # Bureau Balance Aggregation
+    # Bureau balance aggregation
     bb_agg = bb_enc.groupby("SK_ID_BUREAU").agg(
         {
             **{"MONTHS_BALANCE": ["min", "max", "size"]},
@@ -173,7 +173,7 @@ def preprocess_bureau(bureau, bb):
     del bb, bb_enc, bur_enc, bb_agg
     gc.collect()
 
-    # Bureau Aggregations
+    # Bureau aggregations
     num_aggs = {
         "DAYS_CREDIT": ["min", "max", "mean", "var"],
         "DAYS_CREDIT_ENDDATE": ["min", "max", "mean"],
@@ -200,7 +200,7 @@ def preprocess_bureau(bureau, bb):
     bureau_agg = bureau.groupby("SK_ID_CURR").agg({**num_aggs, **cat_aggs})
     bureau_agg.columns = [f"BURO_{e[0]}_{e[1].upper()}" for e in bureau_agg.columns]
 
-    # Active/Closed Splits
+    # Active/closed splits
     for status in ["Active", "Closed"]:
         subset = bureau[bureau[f"CREDIT_ACTIVE_{status}"] == 1]
         sub_agg = subset.groupby("SK_ID_CURR").agg(num_aggs)
@@ -218,7 +218,7 @@ def preprocess_bureau(bureau, bb):
 @timer
 def preprocess_previous_applications(prev):
     prev = prev.drop(columns=["SK_ID_PREV"])
-    # Cleaning & Feature Engineering
+    # Clean and engineer features
     days_cols = [
         "DAYS_FIRST_DRAWING",
         "DAYS_FIRST_DUE",

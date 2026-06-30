@@ -130,14 +130,14 @@ def display_df(
     freeze_first_col: bool = True,
     max_col_width: str | None = None,
 ):
-    """Style un DataFrame avec gradients, mappings, alignements et formatage numérique."""
-    # Travail sur une copie pour éviter de modifier le DF original
+    """Style a DataFrame with gradients, color maps, alignment, and number formatting."""
+    # Work on a copy to avoid mutating the original frame
     styler = df.style
 
     num_cols = df.select_dtypes(include=[np.number]).columns
     other_cols = df.columns.difference(num_cols)
 
-    # 1. Appliquer les gradients en premier (sur les données brutes)
+    # 1. Apply gradients first
     if gradient_cols:
         valid_grads = [
             c for c in gradient_cols if c in df.columns and not df[c].dropna().empty
@@ -146,7 +146,7 @@ def display_df(
             styler = styler.background_gradient(
                 subset=valid_grads, cmap="YlOrRd", axis=0
             )
-            # Rendre les 0 ou NaN transparents par-dessus le gradient
+            # Hide zeros and NaNs on top of the gradient
             styler = styler.map(
                 lambda x: (
                     "background-color: transparent" if (pd.isna(x) or x == 0) else ""
@@ -154,7 +154,7 @@ def display_df(
                 subset=valid_grads,
             )
 
-    # 2. Appliquer les mappings de couleurs spécifiques
+    # 2. Apply custom color mappings
     if mapping:
         for col, val_map in mapping.items():
             if col in df.columns:
@@ -167,7 +167,7 @@ def display_df(
                     subset=[col],
                 )
 
-    # 3. Formater les nombres et les chaînes
+    # 3. Format numbers and strings
     def _smart_num_format(x):
         if pd.isna(x) or x == 0:
             return ""
@@ -180,11 +180,11 @@ def display_df(
     styler = styler.format(_smart_num_format, subset=num_cols)
     styler = styler.format(na_rep="", subset=other_cols)
 
-    # 4. Définir les alignements
+    # 4. Set alignment
     styler = styler.set_properties(subset=other_cols, **{"text-align": "left"})  # ty:ignore[unresolved-attribute]
     styler = styler.set_properties(subset=num_cols, **{"text-align": "right"})
 
-    # 5. Construction des styles CSS
+    # 5. Build CSS styles
     cell_props = [
         ("border", "1px solid #444"),
         ("padding", "6px"),
@@ -224,7 +224,7 @@ def display_df(
     ]
 
     if freeze_first_col:
-        # Figer la colonne index (TH)
+        # Freeze the index column
         table_styles.extend(
             [
                 {

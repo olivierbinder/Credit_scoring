@@ -23,11 +23,10 @@ RUN uv sync --frozen --no-dev
 
 # Configs et seuils
 COPY config/ ./config/
-
-# Script de démarrage
-COPY start.sh ./
-RUN chmod +x start.sh
+COPY reports/ ./reports/
+COPY logs/ ./logs/
 
 EXPOSE 7860 8000
 
-CMD ["./start.sh"]
+# Start FastAPI in the background and Streamlit in the foreground
+CMD ["sh", "-c", "uvicorn credit_scoring.serving.api:app --host 0.0.0.0 --port 8000 & exec streamlit run src/credit_scoring/interfaces/app_streamlit.py --server.port 7860 --server.address 0.0.0.0"]

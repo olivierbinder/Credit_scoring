@@ -43,7 +43,7 @@ def build_robust_feature_ranking(
     y = train_df["TARGET"]
     features = X.columns.tolist()
 
-    # Storage
+    # Store results
 
     all_importances = []
 
@@ -98,7 +98,7 @@ def build_robust_feature_ranking(
         .reset_index()
     )
 
-    # Nombre de runs où la feature est utilisée
+    # Share of runs where the feature appears
     ranking_df["presence_rate"] = (
         imp_df.groupby("feature")["importance"].apply(lambda x: (x > 0).mean()).values
     )

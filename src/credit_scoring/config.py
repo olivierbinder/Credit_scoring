@@ -46,13 +46,15 @@ ML_FLOW_DB = DIR_ROOT / "mlflow.db"
 MLFLOW_TRACKING_URI = f"sqlite:///{ML_FLOW_DB}"
 PROD_MODEL = DIR_PROJ / "serving" / "model"
 PROD_REFERENCE = DIR_PROJ / "serving" / "db" / "reference.parquet"
+PROD_TEST = DIR_PROJ / "serving" / "db" / "test.parquet"
 
 
 # Default paths — overridable via st.session_state set by the main app
-DIR_PRED = "logs/predictions.jsonl"
-DIR_API = "logs/api_calls.jsonl"
-DIR_REFERENCE = "data/processed/reference.parquet"
-
+FILE_PRED = DIR_ROOT / "logs/predictions.jsonl"
+FILE_API = DIR_ROOT / "logs/api_calls.jsonl"
+FILE_REFERENCE = DIR_ROOT / "data/processed/reference.parquet"
+FILE_DRIFT_REPORT = DIR_ROOT / "reports/drift_report.html"
+FILE_QUALITY_REPORT = DIR_ROOT / "reports/quality_report.html"
 # %%  # FEATURES                                                                       .
 # Final model features
 NUMERICAL_FEATURES = [
@@ -111,27 +113,31 @@ ENGINEERED_FEATURES = [
 
 # Feature Groups for Dashboard Layout
 FEATURE_GROUPS = {
-    "📈 Credit Scores": ["EXT_SOURCE_1", "EXT_SOURCE_2", "EXT_SOURCE_3"],
-    "👤 Applicant Profile": [
+    "📈 Scores externes de solvabilité": [
+        "EXT_SOURCE_1",
+        "EXT_SOURCE_2",
+        "EXT_SOURCE_3",
+    ],
+    "👤 Profil du demandeur": [
         "CODE_GENDER",
         "NAME_EDUCATION_TYPE",
         "DAYS_BIRTH",
         "DAYS_EMPLOYED",
         "OWN_CAR_AGE",
     ],
-    "💰 Loan Application": ["AMT_ANNUITY", "AMT_GOODS_PRICE", "PAYMENT_RATE"],
-    "📅 Repayment History": [
+    "💰 Caractéristiques du prêt": ["AMT_ANNUITY", "AMT_GOODS_PRICE", "PAYMENT_RATE"],
+    "📅 Historique de remboursement": [
         "INSTAL_DPD_MEAN",
         "INSTAL_AMT_PAYMENT_SUM",
         "POS_CNT_INSTALMENT_FUTURE_MEAN",
         "POS_SK_DPD_DEF_MEAN",
     ],
-    "🏦 Credit History": [
+    "🏦 Historique de crédit": [
         "PREV_CNT_PAYMENT_MEAN",
         "PREV_DAYS_LAST_DUE_1ST_VERSION_MEAN",
         "ACTIVE_DAYS_CREDIT_MAX",
     ],
-    "💳 Credit Card Activity": [
+    "💳 Utilisation carte de crédit": [
         "CC_CNT_DRAWINGS_ATM_CURRENT_MEAN",
         "CC_CNT_DRAWINGS_CURRENT_VAR",
     ],
@@ -156,24 +162,30 @@ GENDER_INVERSE = {v: k for k, v in GENDER_MAP.items()}
 EDUCATION_INVERSE = {v: k for k, v in EDUCATION_MAP.items()}
 
 FEATURE_LABELS = {
-    "EXT_SOURCE_1": "External Score 1",
-    "EXT_SOURCE_2": "External Score 2",
-    "EXT_SOURCE_3": "External Score 3",
-    "CODE_GENDER": "Gender",
-    "NAME_EDUCATION_TYPE": "Education",
-    "DAYS_BIRTH": "Age",
-    "DAYS_EMPLOYED": "Employment Duration",
-    "OWN_CAR_AGE": "Car Age",
-    "AMT_ANNUITY": "Loan Annuity",
-    "AMT_GOODS_PRICE": "Goods Price",
-    "PAYMENT_RATE": "Payment Rate",
-    "INSTAL_DPD_MEAN": "Avg Days Past Due",
-    "INSTAL_AMT_PAYMENT_SUM": "Installment Payments",
-    "POS_CNT_INSTALMENT_FUTURE_MEAN": "Future Installments",
-    "POS_SK_DPD_DEF_MEAN": "POS Delinquency",
-    "PREV_CNT_PAYMENT_MEAN": "Previous Payment Count",
-    "PREV_DAYS_LAST_DUE_1ST_VERSION_MEAN": "Previous Due Date",
-    "ACTIVE_DAYS_CREDIT_MAX": "Active Credit Age",
-    "CC_CNT_DRAWINGS_ATM_CURRENT_MEAN": "ATM Withdrawals",
-    "CC_CNT_DRAWINGS_CURRENT_VAR": "Card Usage Variability",
+    # Scores externes
+    "EXT_SOURCE_1": "Score externe 1",
+    "EXT_SOURCE_2": "Score externe 2",
+    "EXT_SOURCE_3": "Score externe 3",
+    # Profil du demandeur
+    "CODE_GENDER": "Genre du demandeur",
+    "NAME_EDUCATION_TYPE": "Niveau d’études",
+    "DAYS_BIRTH": "Âge du demandeur (jours)",
+    "DAYS_EMPLOYED": "Ancienneté professionnelle (jours)",
+    "OWN_CAR_AGE": "Ancienneté du véhicule (années)",
+    # Caractéristiques du prêt
+    "AMT_ANNUITY": "Mensualité prévue (€)",
+    "AMT_GOODS_PRICE": "Prix du bien financé (€)",
+    "PAYMENT_RATE": "Ratio mensualité / montant du crédit",
+    # Historique de remboursement
+    "INSTAL_DPD_MEAN": "Retard moyen de paiement (jours)",
+    "INSTAL_AMT_PAYMENT_SUM": "Montant total remboursé (€)",
+    "POS_CNT_INSTALMENT_FUTURE_MEAN": "Échéances restantes moyennes (mois)",
+    "POS_SK_DPD_DEF_MEAN": "Retard moyen avec tolérance (jours)",
+    # Historique de crédit
+    "PREV_CNT_PAYMENT_MEAN": "Nombre moyen d’échéances des anciens crédits (mois)",
+    "PREV_DAYS_LAST_DUE_1ST_VERSION_MEAN": "Fin prévue moyenne des anciens crédits (jours)",
+    "ACTIVE_DAYS_CREDIT_MAX": "Ancienneté du dernier crédit actif (jours)",
+    # Carte de crédit
+    "CC_CNT_DRAWINGS_ATM_CURRENT_MEAN": "Nombre moyen de retraits au distributeur par mois",
+    "CC_CNT_DRAWINGS_CURRENT_VAR": "Variabilité mensuelle du nombre d’opérations carte",
 }

@@ -1,3 +1,4 @@
+# src/credit_scoring/models/evaluate.py
 # %%  IMPORTS                                                                          .
 import matplotlib.pyplot as plt
 import mlflow
@@ -40,6 +41,9 @@ def evaluate_and_log_metrics(y, y_proba, y_pred, dataset_name):
         f"{dataset_name}_fn": fn / n,
         f"{dataset_name}_tn": tn / n,
         f"{dataset_name}_fp": fp / n,
+        # Summary
+        f"{dataset_name}_positive_rate": y_pred.mean(),
+        f"{dataset_name}_actual_positive_rate": y.mean(),
         # Secondary
         f"{dataset_name}_log_loss": log_loss(y, y_proba),
         f"{dataset_name}_precision": precision_score(y, y_pred),

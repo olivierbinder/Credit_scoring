@@ -1,17 +1,16 @@
 # src/credit_scoring/interfaces/app_streamlit.py
 """
-Point d'entrée de l'application Streamlit multi-pages.
+Multi-page Streamlit entry point.
 
-Lancement :
-    streamlit run src/credit_scoring/interfaces/app_streamlit.py
-
-Pages :
-    📊 Scoring     — prédiction interactive par client
-    📡 Monitoring  — drift, anomalies opérationnelles, logs
+Pages:
+    📊 Scoring     - interactive client prediction
+    📡 Monitoring  - drift, operational anomalies, logs
 """
 
+# %% IMPORTS                                                                           .
 import streamlit as st
 
+# %% APPLICATION                                                                       .
 st.set_page_config(
     page_title="Credit Scoring",
     page_icon="📊",
@@ -36,9 +35,10 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ── Pages ──────────────────────────────────────────────────────────────────────
-scoring_page = st.Page("pages/scoring.py", title="Scoring", icon="📊", default=True)
-monitoring_page = st.Page("pages/monitoring.py", title="Monitoring", icon="📡")
+
+# %% PAGES                                                                             .
+scoring_page = st.Page("pages/scoring.py", title="Prédiction", icon="📊", default=True)
+monitoring_page = st.Page("pages/monitoring.py", title="Pilotage", icon="📡")
 
 pg = st.navigation([scoring_page, monitoring_page])
 pg.run()

@@ -1,30 +1,8 @@
 """
-TRAINING PIPELINE MODULE
+Training pipeline module.
 
-Description:
-    This module orchestrates the end-to-end machine learning training pipeline.
-    It is designed to be modular and dynamic, handling the lifecycle from data
-    ingestion to model registration.
-
-Workflow:
-    1. Data Loading: Dynamically loads source data based on the selected
-       configuration (Apps, Bureau, or Previous_App).
-    2. Preprocessing: Applies specific feature engineering pipelines
-       corresponding to the chosen data sources.
-    3. Training: Trains the selected model architecture (e.g., XGBoost, LightGBM).
-    4. Evaluation: Computes performance metrics on a validation set.
-    5. MLflow Logging: Logs parameters, metrics, and the model artifact
-       to MLflow for reproducibility and versioning.
-
-Usage:
-    This module is intended to be triggered via the FastAPI backend or
-    manually for experiment tracking. It ensures that every training run
-    is traceable and compatible with the deployment pipeline.
-
-Requirements:
-    - MLflow must be configured (tracking URI).
-    - Data sources must be available in the defined paths.
-    - Environment variables must be set for CI/CD integration.
+This module orchestrates the end-to-end model training workflow, from data
+loading to model registration.
 """
 # %%  IMPORTS                                                                          .
 
@@ -69,7 +47,7 @@ from credit_scoring.models.train import (
 )
 
 # %%  SETTINGS                                                                         .
-# Suppress log pollution and framework warnings
+# Silence framework warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="mlflow")
 warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
 logging.getLogger("mlflow").setLevel(logging.ERROR)
@@ -129,7 +107,7 @@ def run_experiment(
     logger.info(f"ℹ️ Run Feature Importance: {run_feat_imp}")
     logger.info(f"ℹ️ Run SHAP: {run_shap}")
 
-    # !! Load and Process Data / load processed data.
+    # Load processed data or preprocess raw sources.
     if load_raw_data is False:
         logger.info(msg="✅ Loading processed data from cache")
         df = pd.read_parquet(FILE_DATA_PROCESSED)
@@ -158,7 +136,7 @@ def run_experiment(
     del train_df
     gc.collect()
 
-    # !! Feature selection.
+    # Feature selection.
     if "importan" in cfg.ft_selection.lower():
         logger.info(msg="✅ Filtering important features")
         X = select_important_features(X, 20)
@@ -166,8 +144,8 @@ def run_experiment(
             f"🆗 Features selection : (shape = {X.shape[0]:,d} | {X.shape[1]:,d})"
         )
 
-    # !! Split Data.
-    X_train, X_test, y_train, y_test = train_test_split(
+    # Split data.
+    X_train_full, X_test, y_train_full, y_test = train_test_split(
         X,
         y,
         test_size=cfg.test_size,
@@ -177,13 +155,23 @@ def run_experiment(
     del X, y
     gc.collect()
 
-    # !! Experiment.
+    X_train, X_calib, y_train, y_calib = train_test_split(
+        X_train_full,
+        y_train_full,
+        test_size=0.2,
+        random_state=cfg.random_state,
+        stratify=y_train_full,
+    )
+    del X_train_full, y_train_full
+    gc.collect()
+
+    # Experiment setup.
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     mlflow.set_experiment(cfg.name)
     with mlflow.start_run(run_name=cfg.run):
         logger.info("✅ Starting MLFlow run")
 
-        # !! Logging.
+        # Logging.
         mlflow.set_tag("data_loading", cfg.data_loading)
         mlflow.set_tag("feature_engineering", cfg.ft_engineering)
         mlflow.set_tag("feature_selection", cfg.ft_selection)
@@ -192,7 +180,7 @@ def run_experiment(
         mlflow.set_tag("nb_rows_train", X_train.shape[0])
         mlflow.log_params(cfg.model_params)
 
-        # !! Cross-Validation.
+        # Cross-validation.
         if run_cv:
             logger.info("✅ Running Cross-Validation")
             cv_results = run_cross_validation(
@@ -207,7 +195,7 @@ def run_experiment(
                 mlflow.log_metric(f"cv_{metric}_mean", round(float(np.mean(scores)), 4))
                 mlflow.log_metric(f"cv_{metric}_std", round(float(np.std(scores)), 4))
 
-        # !! Training.
+        # Training.
         logger.info("✅ Training model")
 
         model = train_model(
@@ -218,17 +206,18 @@ def run_experiment(
         )
         logger.info("🆗 Production model trained")
 
-        optimal_threshold = optimize_threshold(model, X_test, y_test)
+        optimal_threshold = optimize_threshold(model, X_calib, y_calib)
         mlflow.log_param("evaluation_threshold", optimal_threshold)
 
-        # !! Evaluation.
+        # Evaluation.
         logger.info("✅ Evaluating model")
         evaluate_and_log(model, X_test, y_test, "test", optimal_threshold)
+        evaluate_and_log(model, X_calib, y_calib, "calibration", optimal_threshold)
         evaluate_and_log(model, X_train, y_train, "train", optimal_threshold)
 
         mlflow.set_tag("nb_rows_test", X_test.shape[0])
 
-        # !! Explanation.
+        # Explanation.
         feature_names = X_train.columns.tolist()
         mlflow.log_dict(feature_names, "features.json")
 
@@ -243,7 +232,7 @@ def run_experiment(
                 max_features=25,
             )
 
-        # !! Logging.
+        # Logging.
         logger.info("✅ Logging model")
         artifact_name = (
             cfg.model
@@ -274,7 +263,7 @@ def run_experiment(
 
         logger.info(f"🆗 Model '{cfg.model}' logged to MLflow.")
 
-        # !! Generate Predictions for Kaggle.
+        # Generate Kaggle predictions.
         if kaggle:
             logger.info("✅ Generating Kaggle predictions")
             X_kaggle = test_df[feature_names]
@@ -296,7 +285,7 @@ def parse_args():
     parser.add_argument(
         "--config",
         type=str,
-        default="config/training.yaml",
+        default=DIR_CONFIG / "training.yaml",
         help="Path to config file.",
     )
     parser.add_argument(

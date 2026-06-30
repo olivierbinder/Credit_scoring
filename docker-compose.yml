@@ -5,9 +5,5 @@ services:
     ports:
       - "8000:8000"
       - "7860:7860"
-    # En dev : on monte uniquement le code source pour le hot-reload,
-    # sans écraser le venv ni les artefacts copiés dans l'image.
-    volumes:
-      - ./src:/app/src:ro
     env_file:
       - .env

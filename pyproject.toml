@@ -6,28 +6,28 @@ readme = "README.md"
 authors = [
     { name = "Olivier", email = "mail@mail.com" }
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 
 dependencies = [
-    # ── API ─────────────────────────────
-    "fastapi>=0.136.1",
-    "uvicorn>=0.46.0",
-    "pydantic>=2.13.3",
-    # ── UI ──────────────────────────────
-    "streamlit>=1.58.0",
-    "plotly>=6.8.0",
-    # ── Data / ML inference ─────────────
-    "numpy>=2.4.4",
+    # Data / ML inference
+    "numpy>=2.0.2",
     "pandas>=2.3.3",
     "scikit-learn>=1.8.0",
     "lightgbm>=4.6.0",
-    # ── utils ───────────────────────────
-    "python-dotenv>=1.2.2",
-    "requests>=2.32.0",
-    # experiment tracking
+    "onnxruntime>=1.27.0",
+    # Model loading / tracking
     "mlflow>=3.12.0",
-    "evidently>=0.4.36",
-    "rich>=15.0.0",
+    # API
+    "fastapi>=0.136.1",
+    "uvicorn>=0.46.0",
+    "pydantic>=2.13.3",
+    # UI
+    "streamlit>=1.58.0",
+    "evidently>=0.7.21",
+    "plotly>=5.24.1",
+    "psutil>=7.2.2",
+    # ── utils ───────────────────────────
+    "requests>=2.32.0",
 ]
 
 
@@ -59,7 +59,11 @@ dev = [
     "xgboost>=3.2.0",
     "catboost>=1.2.10",
     "numba>=0.59.0",
+    "onnxmltools>=1.16.0",
+    "skl2onnx>=1.20.0",
     # tooling
     "ipykernel>=7.2.0",
     "nbformat>=5.10.4",
+    # doc
+    "zensical>=0.0.46",
 ]

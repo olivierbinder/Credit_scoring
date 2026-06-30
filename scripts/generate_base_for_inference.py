@@ -33,4 +33,4 @@ ref = df[df["TARGET"].notnull()][["SK_ID_CURR"] + FEATURES]
 ref.to_parquet(DIR_DATA_PROCESSED / "reference.parquet", index=False)
 
 new = df[df["TARGET"].isnull()][["SK_ID_CURR"] + FEATURES]
-new.to_parquet(DIR_DATA_PROCESSED / "new.parquet", index=False)
+new.to_parquet(DIR_DATA_PROCESSED / "test.parquet", index=False)

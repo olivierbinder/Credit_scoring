@@ -48,7 +48,7 @@ def extract_and_plot_importance(model, feature_names: list, max_features: int = 
         "explain/feature_importance_top.json",
     )
 
-    # Generate and logFeature Importance Plot
+    # Generate and log feature importance plot
     df_plot = df_imp.head(max_features).sort_values("absolute_importance")
 
     fig, ax = plt.subplots(figsize=(8, max(4, max_features * 0.3)))
@@ -108,7 +108,7 @@ def extract_and_plot_shap(model, X_sample: pd.DataFrame, max_features: int = 25)
         "explain/shap_importance_all_top.json",
     )
 
-    # Generate and log SHAP Beeswarm Plot
+    # Generate and log SHAP beeswarm plot
     fig = plt.figure(figsize=(8, max(4, max_features * 0.3)))
     shap.summary_plot(values, X_sample, max_display=max_features, show=False)
     fig = plt.gcf()
@@ -117,7 +117,7 @@ def extract_and_plot_shap(model, X_sample: pd.DataFrame, max_features: int = 25)
     mlflow.log_figure(fig, "explain/shap_importance_plot_beeswarm.png")
     plt.close(fig)
 
-    # Generate and log SHAP Importance Bar Plot
+    # Generate and log SHAP importance bar plot
     df_plot = df_shap.head(max_features).sort_values("mean_abs_shap")
 
     fig2, ax = plt.subplots(figsize=(8, max(4, max_features * 0.3)))

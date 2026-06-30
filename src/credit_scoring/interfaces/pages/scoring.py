@@ -1,13 +1,13 @@
 # src/credit_scoring/interfaces/pages/scoring.py
 """
-Page « Scoring » — prédiction interactive par client.
-Contenu original de app_streamlit.py, sans set_page_config ni CSS
-(gérés dans le fichier d'entrée app_streamlit.py).
+"Scoring" page - interactive client prediction.
+Original content from app_streamlit.py, without set_page_config or CSS
+(handled in the app_streamlit.py entry file).
 """
 
 # %% IMPORTS                                                                           .
-
 import io
+from typing import get_args
 
 import numpy as np
 import pandas as pd
@@ -24,14 +24,21 @@ from credit_scoring.config import (
     FEATURE_LABELS,
     GENDER_INVERSE,
 )
+from credit_scoring.serving.inference import CreditScoringInput
 
 # %% CONFIG                                                                            .
-
 API_BASE = "http://127.0.0.1:8000"
-
+KDE_LINE_COLOR = "#2f6f9f"
+KDE_FILL_COLOR = "rgba(47, 111, 159, 0.20)"
+VALUE_MARKER_COLOR = "#7f7f7f"
+CATEGORY_SELECTED_COLOR = "#2f6f9f"
+CATEGORY_DEFAULT_COLOR = "#d8dde3"
 _all_groups = list(FEATURE_GROUPS.keys())
 LEFT_GROUPS = _all_groups[:3]
 RIGHT_GROUPS = _all_groups[3:]
+INPUT_FIELD_TYPES = {
+    name: field.annotation for name, field in CreditScoringInput.model_fields.items()
+}
 
 
 def decode_for_display(raw: dict) -> dict:
@@ -43,9 +50,40 @@ def decode_for_display(raw: dict) -> dict:
     return decoded
 
 
+def annotation_contains(annotation, expected_type: type) -> bool:
+    if annotation is expected_type:
+        return True
+    return any(annotation_contains(arg, expected_type) for arg in get_args(annotation))
+
+
+def is_integer_feature(feature_name: str) -> bool:
+    return annotation_contains(INPUT_FIELD_TYPES.get(feature_name), int)
+
+
+def format_numeric_value(feature_name: str, value) -> str:
+    if value is None or pd.isna(value):
+        return ""
+
+    numeric_value = float(value)
+    if is_integer_feature(feature_name) or numeric_value.is_integer():
+        return str(int(numeric_value))
+
+    return f"{numeric_value:.3f}".rstrip("0").rstrip(".")
+
+
+def parse_numeric_value(feature_name: str, value: str):
+    cleaned_value = value.strip().replace(",", ".")
+    if cleaned_value == "":
+        return None
+
+    numeric_value = float(cleaned_value)
+    if is_integer_feature(feature_name):
+        return int(numeric_value)
+
+    return numeric_value
+
+
 # %% CACHE                                                                             .
-
-
 @st.cache_data
 def load_model_info():
     response = requests.get(f"{API_BASE}/model-info")
@@ -67,8 +105,6 @@ REFERENCE_DF = load_reference_data()
 
 
 # %%  PLOTTING HELPERS                                                                 .
-
-
 def get_reference_series(feature_name):
     series = REFERENCE_DF[feature_name]
     if feature_name == "CODE_GENDER":
@@ -104,12 +140,22 @@ def make_kde_plot_for_value(feature_name, value):
         return None
     xs, ys = data
     fig = go.Figure()
-    fig.add_scatter(x=xs, y=ys, mode="lines", fill="tozeroy")
+    fig.add_scatter(
+        x=xs,
+        y=ys,
+        mode="lines",
+        fill="tozeroy",
+        line=dict(color=KDE_LINE_COLOR, width=2),
+        fillcolor=KDE_FILL_COLOR,
+    )
     if value is not None:
-        fig.add_vline(x=float(value), line_color="red", line_width=3)
+        fig.add_vline(x=float(value), line_color=VALUE_MARKER_COLOR, line_width=2)
     fig.update_layout(
+        template="plotly_white",
         height=50,
         margin=dict(l=0, r=0, t=0, b=0),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
         showlegend=False,
         xaxis_visible=False,
         yaxis_visible=False,
@@ -131,14 +177,20 @@ def make_bar_plot_for_value(feature_name, value):
         "Higher education": "Higher",
         "Academic degree": "Academic",
     }
-    colors = ["crimson" if str(i) == str(value) else "lightgray" for i in index]
+    colors = [
+        CATEGORY_SELECTED_COLOR if str(i) == str(value) else CATEGORY_DEFAULT_COLOR
+        for i in index
+    ]
     fig = go.Figure()
     fig.add_bar(
         x=[LABELS.get(str(x), str(x)) for x in index], y=values, marker_color=colors
     )
     fig.update_layout(
+        template="plotly_white",
         height=50,
         margin=dict(l=0, r=0, t=0, b=20),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
         showlegend=False,
         yaxis_visible=False,
     )
@@ -146,9 +198,7 @@ def make_bar_plot_for_value(feature_name, value):
     return fig
 
 
-# %%          .          TOP BAR           .
-
-
+# %%  TOP BAR                                                                          .
 title_col, sep, id_col, load_col, predict_col, result_col = st.columns(
     [2, 0.1, 1, 0.8, 0.8, 4]
 )
@@ -204,7 +254,11 @@ with result_col:
             )
             fig.update_layout(height=120, margin=dict(l=10, r=10, t=10, b=0))
             st.plotly_chart(
-                fig, use_container_width=True, config={"displayModeBar": False}
+                fig,
+                use_container_width=True,
+                theme=None,
+                key="scoring_prediction_gauge",
+                config={"displayModeBar": False},
             )
 
         with label_col:
@@ -228,15 +282,13 @@ with result_col:
 
 st.divider()
 
-
-# %%          .          LOAD CLIENT          .
-
+# %%  LOAD CLIENT                                                                      .
 if load_clicked:
     try:
         response = requests.get(f"{API_BASE}/lookup/{int(sk_id)}", timeout=5)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        st.error(f"Impossible de joindre l'API : {e}")
+        st.error(f"Unable to reach the API: {e}")
         st.stop()
 
     if response.status_code == 200:
@@ -244,16 +296,14 @@ if load_clicked:
         st.session_state["loaded_sk_id"] = int(sk_id)
         st.session_state.pop("prediction", None)
         st.session_state.pop("edited_features", None)
-        st.toast(f"Client {int(sk_id)} chargé ✅")
+        st.toast(f"Client {int(sk_id)} loaded ✅")
     else:
-        st.error("Client non trouvé ❌")
+        st.error("Client not found ❌")
 
-# %%          .          PREDICT          .
-
-
+# %%  PREDICT                                                                          .
 if predict_clicked:
     if "edited_features" not in st.session_state:
-        st.warning("Chargez un client d'abord.")
+        st.warning("Load a client first.")
     else:
         with st.spinner("Computing prediction..."):
             response = requests.post(
@@ -267,9 +317,8 @@ if predict_clicked:
         st.session_state["prediction"] = response.json()
         st.rerun()
 
-# %%          .          FEATURE DISPLAY WITH INLINE EDITING          .
 
-
+# %%  FEATURE DISPLAY WITH INLINE EDITING                                              .
 def render_feature_group(group_name, features, edited, widget_prefix):
     st.markdown(f"#### {group_name}")
     for feature_name in FEATURE_GROUPS[group_name]:
@@ -282,7 +331,7 @@ def render_feature_group(group_name, features, edited, widget_prefix):
 
         with col_name:
             st.markdown(
-                f"<div style='padding-top:0.45rem;font-size:0.85rem;color:#555'>"
+                f"<div style='padding-top:0.45rem;font-size:0.85rem;color:#c7ccd4'>"
                 f"{FEATURE_LABELS.get(feature_name, feature_name)}</div>",
                 unsafe_allow_html=True,
             )
@@ -308,12 +357,12 @@ def render_feature_group(group_name, features, edited, widget_prefix):
             else:
                 txt = st.text_input(
                     feature_name,
-                    value="" if value is None else str(value),
+                    value=format_numeric_value(feature_name, value),
                     placeholder="NaN",
                     key=widget_key,
                     label_visibility="collapsed",
                 )
-                new_val = None if txt == "" else float(txt)
+                new_val = parse_numeric_value(feature_name, txt)
             edited[feature_name] = new_val
 
         with col_plot:
@@ -325,7 +374,11 @@ def render_feature_group(group_name, features, edited, widget_prefix):
             )
             if fig is not None:
                 st.plotly_chart(
-                    fig, use_container_width=True, config={"displayModeBar": False}
+                    fig,
+                    use_container_width=True,
+                    theme=None,
+                    key=f"scoring_distribution_{widget_prefix}_{feature_name}",
+                    config={"displayModeBar": False},
                 )
 
     st.divider()
@@ -335,8 +388,12 @@ if "features" in st.session_state:
     features = st.session_state["features"]
     widget_prefix = str(st.session_state["loaded_sk_id"])
 
-    if "edited_features" not in st.session_state:
+    if (
+        "edited_features" not in st.session_state
+        or st.session_state.get("_edited_features_source") != widget_prefix
+    ):
         st.session_state["edited_features"] = features.copy()
+        st.session_state["_edited_features_source"] = widget_prefix
 
     current_features = st.session_state["edited_features"]
     edited = {}

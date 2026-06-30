@@ -1,470 +1,514 @@
 # src/credit_scoring/interfaces/pages/monitoring.py
-"""
-Page « Monitoring » — drift, anomalies opérationnelles, exploration des logs.
 
-Accès via la navigation principale de l'app (📡 Monitoring).
-Les chemins de logs sont configurables dans la sidebar.
-"""
-
-from __future__ import annotations
-
+# %% IMPORTS                                                                           .
+import cProfile
+import pstats
+import time
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
+import plotly.express as px
 import streamlit as st
+import streamlit.components.v1
+from evidently import DataDefinition, Dataset, Report
+from evidently.presets import DataDriftPreset, DataSummaryPreset
 
-from credit_scoring.interfaces.monitoring.data import (
-    DIR_API,
-    DIR_PRED,
-    DIR_REFERENCE,
-    NULLABLE_FEATURES,
+# Paths from config
+from credit_scoring.config import (
+    CATEGORICAL_FEATURES,
+    EDUCATION_INVERSE,
+    FILE_API,
+    FILE_DRIFT_REPORT,
+    FILE_QUALITY_REPORT,
+    GENDER_INVERSE,
     NUMERICAL_FEATURES,
-    load_api_calls,
-    load_predictions,
-    load_reference,
+    PROD_REFERENCE,
+    PROD_TEST,
 )
+from credit_scoring.serving.inference import get_model, get_reference_df
 
-# ──────────────────────────────────────────────────────────────────────────────
-# SIDEBAR — configuration des chemins + filtre temporel
-# ──────────────────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.header("⚙️ Configuration")
+# %% IMPORTS                                                                           .
+st.title("📡 Pilotage")
 
-    pred_path = st.text_input("Prediction log", value=DIR_PRED)
-    api_path = st.text_input("API call log", value=DIR_API)
-    ref_path = st.text_input("Reference data", value=DIR_REFERENCE)
 
-    if st.button("🔄 Recharger les données", use_container_width=True):
-        st.cache_data.clear()
-        st.rerun()
+# Utilities
+@st.cache_data(ttl=60)
+def load_logs(file_path):
+    if not file_path.exists():
+        return pd.DataFrame()
+    return pd.read_json(file_path, lines=True)
 
-    st.divider()
-    st.caption("Filtre temporel")
 
-# ──────────────────────────────────────────────────────────────────────────────
-# LOAD DATA
-# ──────────────────────────────────────────────────────────────────────────────
-pred_df = load_predictions(pred_path)
-api_df = load_api_calls(api_path)
-ref_df = load_reference(ref_path)
+MONITORED_API_PATHS = {
+    "/lookup/{sk_id}",
+    "/model-info",
+    "/predict",
+    "/reference",
+}
 
-st.title("📡 Monitoring de production")
 
-if pred_df is None:
-    st.warning(
-        f"Aucun log de prédiction trouvé à `{pred_path}`. "
-        "Lancez l'API avec le `api.py` mis à jour pour commencer à collecter des logs."
-    )
-    st.stop()
+def normalize_api_path(path: str) -> str:
+    normalized_path = path.rstrip("/") or "/"
+    if normalized_path.startswith("/lookup/"):
+        return "/lookup/{sk_id}"
+    return normalized_path
 
-successful = pred_df[pred_df["success"]].copy()
 
-# ── Filtre temporel (sidebar, après chargement) ────────────────────────────────
-with st.sidebar:
-    min_ts = pred_df["timestamp"].min().date()
-    max_ts = pred_df["timestamp"].max().date()
-    date_range = st.date_input(
-        "Période",
-        value=(min_ts, max_ts),
-        min_value=min_ts,
-        max_value=max_ts,
-    )
-
-if isinstance(date_range, (list, tuple)) and len(date_range) == 2:
-    start_date, end_date = date_range
-    mask = (pred_df["timestamp"].dt.date >= start_date) & (
-        pred_df["timestamp"].dt.date <= end_date
-    )
-    pred_df_f = pred_df[mask]
-    successful_f = pred_df_f[pred_df_f["success"]]
-else:
-    pred_df_f = pred_df
-    successful_f = successful
-
-# ── Bandeau de statut global ──────────────────────────────────────────────────
-n_preds = len(pred_df_f)
-n_ok = int(pred_df_f["success"].sum())
-err_rate = 1 - n_ok / n_preds if n_preds else 0.0
-
-baseline_end = max(1, int(len(successful) * 0.20))
-baseline_mean = (
-    float(successful.sort_values("timestamp").iloc[:baseline_end]["probability"].mean())
-    if not successful.empty
-    else 0.0
-)
-recent_mean = (
-    float(successful_f["probability"].mean()) if not successful_f.empty else 0.0
-)
-prob_delta = abs(recent_mean - baseline_mean)
-
-has_op_alert = err_rate > 0.05
-has_drift_alert = prob_delta > 0.10
-
-alert_parts = []
-if has_op_alert:
-    alert_parts.append(f"Taux d'erreur élevé ({err_rate:.1%})")
-if has_drift_alert:
-    alert_parts.append(f"Drift de prédiction détecté (Δ={prob_delta:+.3f})")
-
-if alert_parts:
-    st.error("🔴 " + " · ".join(alert_parts))
-else:
-    st.success("✅ Aucune anomalie détectée sur la période sélectionnée")
-
-# ──────────────────────────────────────────────────────────────────────────────
-# TABS
-# ──────────────────────────────────────────────────────────────────────────────
-tab_ops, tab_pred, tab_feat, tab_missing, tab_logs, tab_perf = st.tabs(
+# Tabs
+tab1, tab2, tab3 = st.tabs(
     [
-        "🏥 Opérations",
-        "🎯 Prédictions",
-        "📈 Feature Drift",
-        "❓ Valeurs manquantes",
-        "⚡ Performance",
-        "🗂️ Logs",
+        "🖥️ Supervision de l’API",
+        "📊 Détection de dérive des données",
+        "⚡ Optimisation de l’inférence modèle",
     ]
 )
 
 
-# ════════════════════════════════════════════════════════════════════════════════
-# TAB 1 — OPERATIONAL HEALTH
-# ════════════════════════════════════════════════════════════════════════════════
-with tab_ops:
-    st.subheader("Santé opérationnelle")
+# %% TAB 1 : SRE Dashboard                                                      .
+with tab1:
+    st.header("État de l’API")
+    api_df = load_logs(FILE_API)
 
-    if api_df is None:
-        st.info(
-            "Aucun fichier `api_calls.jsonl` trouvé. "
-            "Démarrez l'API avec le `api.py` mis à jour."
-        )
-    else:
-        api_f = (
-            api_df[
-                (api_df["timestamp"].dt.date >= date_range[0])
-                & (api_df["timestamp"].dt.date <= date_range[-1])
-            ]
-            if isinstance(date_range, (list, tuple)) and len(date_range) == 2
-            else api_df
-        )
+    if not api_df.empty:
+        api_df["path_group"] = api_df["path"].apply(normalize_api_path)
+        api_df = api_df[api_df["path_group"].isin(MONITORED_API_PATHS)]
+        api_df["timestamp"] = pd.to_datetime(api_df["timestamp"])
 
-        total = len(api_f)
-        errors = int(api_f["is_error"].sum())
-        error_rate = errors / total if total else 0.0
-        lat = api_f["latency_ms"].dropna()
-
-        c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("Appels totaux", f"{total:,}")
-        c2.metric("Erreurs", f"{errors:,}")
-        c3.metric(
-            "Taux d'erreur",
-            f"{error_rate:.1%}",
-            delta="⚠️ ÉLEVÉ" if error_rate > 0.05 else "OK",
-            delta_color="inverse" if error_rate > 0.05 else "normal",
-        )
-        c4.metric("Latence P50", f"{lat.quantile(0.50):.0f} ms")
-        c5.metric(
-            "Latence P95",
-            f"{lat.quantile(0.95):.0f} ms",
-            delta="⚠️ ÉLEVÉ" if lat.quantile(0.95) > 2000 else "OK",
-            delta_color="inverse" if lat.quantile(0.95) > 2000 else "normal",
-        )
-
-        st.divider()
-
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.markdown("**Volume d'appels (par heure)**")
-            vol = api_f.set_index("timestamp").resample("1h")["status_code"].count()
-            st.line_chart(vol.rename("appels/h"))
-        with col_b:
-            st.markdown("**Latence P50 / P95 (par heure)**")
-            lat_ts = (
-                api_f.set_index("timestamp")["latency_ms"]
-                .resample("1h")
-                .agg(P50=lambda x: x.quantile(0.50), P95=lambda x: x.quantile(0.95))
+        if not api_df.empty:
+            # Summary table
+            st.subheader("Performance par route API")
+            summary = (
+                api_df.groupby("path_group")
+                .agg(
+                    {
+                        "latency_ms": "mean",
+                        "status_code": lambda x: (x >= 400).sum(),
+                        "request_id": "count",
+                    }
+                )
+                .rename(
+                    columns={
+                        "latency_ms": "Latence Moyenne (ms)",
+                        "status_code": "Nb Erreurs",
+                        "request_id": "Volume",
+                    }
+                )
             )
-            st.line_chart(lat_ts)
+            st.dataframe(summary, use_container_width=True)
 
-        st.divider()
-        st.markdown("**Répartition par endpoint**")
-        by_path = (
-            api_f.groupby("path")
-            .agg(
-                Appels=("status_code", "count"),
-                Erreurs=("is_error", "sum"),
-                P50_ms=("latency_ms", lambda x: round(x.quantile(0.50), 1)),
-                P95_ms=("latency_ms", lambda x: round(x.quantile(0.95), 1)),
+            st.divider()
+
+            # Latency chart
+            st.subheader("Analyse de la latence")
+
+            # Compact selector
+            col_sel1, _ = st.columns([1, 4])
+            with col_sel1:
+                selected_endpoint = st.selectbox(
+                    "Route API à afficher:", sorted(api_df["path_group"].unique())
+                )
+
+            # Chart
+            filtered_df = api_df[api_df["path_group"] == selected_endpoint]
+            fig = px.line(
+                filtered_df,
+                x="timestamp",
+                y="latency_ms",
+                labels={"timestamp": "Date / Heure", "latency_ms": "Latence (ms)"},
+                template="plotly_white",
             )
-            .reset_index()
-        )
-        by_path["Taux d'erreur"] = (by_path["Erreurs"] / by_path["Appels"]).map(
-            "{:.1%}".format
-        )
-        st.dataframe(by_path, use_container_width=True)
+            fig.update_layout(height=350, margin=dict(l=20, r=20, t=20, b=20))
+            st.plotly_chart(fig, use_container_width=True)
 
-
-# ════════════════════════════════════════════════════════════════════════════════
-# TAB 2 — PREDICTION DRIFT
-# ════════════════════════════════════════════════════════════════════════════════
-with tab_pred:
-    st.subheader("Suivi des prédictions")
-
-    if successful_f.empty:
-        st.warning("Aucune prédiction réussie sur la période sélectionnée.")
-    else:
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Prédictions", f"{len(successful_f):,}")
-        c2.metric("P(défaut) baseline", f"{baseline_mean:.3f}")
-        c3.metric(
-            "P(défaut) récente",
-            f"{recent_mean:.3f}",
-            delta=f"{recent_mean - baseline_mean:+.3f}",
-            delta_color="inverse" if prob_delta > 0.10 else "normal",
-        )
-
-        if prob_delta > 0.10:
-            st.error(
-                f"🔴 Drift détecté — probabilité moyenne décalée de {prob_delta:.3f}"
-            )
-
-        st.divider()
-
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.markdown("**Distribution des probabilités (production)**")
-            hist = (
-                successful_f["probability"]
-                .pipe(lambda s: pd.cut(s, bins=20))
-                .value_counts()
-                .sort_index()
-                .reset_index()
-            )
-
-            hist.columns = ["probability_range", "count"]
-            hist["probability_range"] = hist["probability_range"].astype(str)
-
-            st.bar_chart(
-                hist,
-                x="probability_range",
-                y="count",
-            )
-        with col_b:
-            st.markdown("**Probabilité moyenne dans le temps**")
-            prob_ts = (
-                successful_f.set_index("timestamp")["probability"].resample("1h").mean()
-            )
-            st.line_chart(prob_ts.rename("P(défaut) moyen"))
-
-        st.markdown("**Taux de défaut prédit (par heure)**")
-        dr_ts = (
-            successful_f.set_index("timestamp")["probability"]
-            .resample("1h")
-            .apply(lambda x: (x >= 0.5).mean())
-        )
-        st.line_chart(dr_ts.rename("taux de défaut"))
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-# TAB 3 — FEATURE DRIFT
-# ════════════════════════════════════════════════════════════════════════════════
-with tab_feat:
-    st.subheader("Drift des features")
-
-    if ref_df is None:
-        st.info(f"Données de référence introuvables (`{ref_path}`).")
-    elif successful_f.empty:
-        st.warning("Aucune donnée de production à comparer.")
-    else:
-        # Rapport Evidently pré-généré
-        drift_report_path = Path("reports/drift_report.html")
-        if drift_report_path.exists():
-            st.markdown("**Rapport Evidently AI**")
-            with open(drift_report_path, encoding="utf-8") as f:
-                html_content = f.read()
-            st.components.v1.html(html_content, height=820, scrolling=True)
-            st.caption(
-                "Rapport généré par `drift_analysis.py`. "
-                "Relancez le script pour le mettre à jour."
-            )
         else:
-            st.info(
-                "Aucun rapport Evidently trouvé. "
-                "Lancez `python drift_analysis.py` pour en générer un, "
-                "puis rechargez la page."
+            st.info("Aucune donnée de logs disponible pour les routes suivies.")
+
+    else:
+        st.info("Aucune donnée de logs disponible.")
+# %% TAB 2 : Surveillance de la dérive des données
+
+CAT_INVERSE_MAPS = {
+    "CODE_GENDER": GENDER_INVERSE,
+    "NAME_EDUCATION_TYPE": EDUCATION_INVERSE,
+}
+
+
+def prepare_monitoring_data() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Load and prepare data for Evidently reports."""
+    features = NUMERICAL_FEATURES + CATEGORICAL_FEATURES
+
+    ref_df = pd.read_parquet(PROD_REFERENCE)[features].copy()
+    test_df = pd.read_parquet(PROD_TEST)[features].copy()
+
+    # Check that no feature is used twice
+    overlap = set(NUMERICAL_FEATURES) & set(CATEGORICAL_FEATURES)
+    if overlap:
+        raise ValueError(f"Features used as both numerical and categorical: {overlap}")
+
+    # Decode categorical features for readable reports
+    for col, inverse_map in CAT_INVERSE_MAPS.items():
+        ref_df[col] = pd.to_numeric(ref_df[col], errors="coerce").map(inverse_map)
+        test_df[col] = pd.to_numeric(test_df[col], errors="coerce").map(inverse_map)
+
+    # Force numerical columns
+    for col in NUMERICAL_FEATURES:
+        ref_df[col] = pd.to_numeric(ref_df[col], errors="coerce")
+        test_df[col] = pd.to_numeric(test_df[col], errors="coerce")
+
+    # Force categorical columns
+    for col in CATEGORICAL_FEATURES:
+        ref_df[col] = ref_df[col].fillna("Inconnu").astype(str)
+        test_df[col] = test_df[col].fillna("Inconnu").astype(str)
+
+    return ref_df, test_df
+
+
+def build_data_definition() -> DataDefinition:
+    """Build Evidently data definition."""
+    return DataDefinition(
+        numerical_columns=NUMERICAL_FEATURES,
+        categorical_columns=CATEGORICAL_FEATURES,
+    )
+
+
+def build_evidently_datasets() -> tuple[Dataset, Dataset]:
+    """Build Evidently Dataset objects with explicit column types."""
+    ref_df, test_df = prepare_monitoring_data()
+    data_definition = build_data_definition()
+
+    ref_data = Dataset.from_pandas(
+        ref_df,
+        data_definition=data_definition,
+    )
+
+    test_data = Dataset.from_pandas(
+        test_df,
+        data_definition=data_definition,
+    )
+
+    return ref_data, test_data
+
+
+def generate_drift_report() -> None:
+    """Generate and save the data drift report."""
+    ref_data, test_data = build_evidently_datasets()
+
+    report = Report(
+        [
+            DataDriftPreset(
+                num_method="wasserstein",
+                cat_method="psi",
+                cat_threshold=0.2,
             )
-
-        st.divider()
-        st.markdown("**Comparaison manuelle production vs. référence**")
-
-        num_cols_available = [
-            c
-            for c in NUMERICAL_FEATURES
-            if c in successful_f.columns and c in ref_df.columns
         ]
-        if num_cols_available:
-            selected = st.selectbox("Feature", num_cols_available)
-
-            prod_vals = successful_f[selected].dropna()
-            ref_vals = ref_df[selected].dropna()
-
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.markdown(f"**Production** (n={len(prod_vals):,})")
-                hist = pd.cut(prod_vals, bins=30).value_counts().sort_index()
-
-                hist.index = hist.index.astype(str)
-
-                st.bar_chart(hist)
-
-            with col_b:
-                st.markdown(f"**Référence** (n={len(ref_vals):,})")
-                hist = pd.cut(ref_vals, bins=30).value_counts().sort_index()
-
-                hist.index = hist.index.astype(str)
-
-                st.bar_chart(hist)
-
-            stat_cols = st.columns(4)
-            stat_cols[0].metric("Moy. prod", f"{prod_vals.mean():.3f}")
-            stat_cols[1].metric("Moy. réf.", f"{ref_vals.mean():.3f}")
-            stat_cols[2].metric("Méd. prod", f"{prod_vals.median():.3f}")
-            stat_cols[3].metric("Méd. réf.", f"{ref_vals.median():.3f}")
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-# TAB 4 — MISSING VALUES
-# ════════════════════════════════════════════════════════════════════════════════
-with tab_missing:
-    st.subheader("Taux de valeurs manquantes (features nullables)")
-
-    nullable_in_prod = [c for c in NULLABLE_FEATURES if c in successful_f.columns]
-    if not nullable_in_prod:
-        st.info("Aucune feature nullable trouvée dans les logs de production.")
-    else:
-        missing_rates = (
-            successful_f[nullable_in_prod]
-            .isna()
-            .mean()
-            .rename("missing_rate")
-            .reset_index()
-            .rename(columns={"index": "feature"})
-        )
-        missing_rates["alerte"] = missing_rates["missing_rate"] > 0.80
-
-        st.bar_chart(missing_rates.set_index("feature")["missing_rate"])
-
-        flagged = missing_rates[missing_rates["alerte"]]
-        if not flagged.empty:
-            st.error(
-                f"🔴 {len(flagged)} feature(s) avec > 80 % de valeurs manquantes :"
-            )
-            st.dataframe(flagged, use_container_width=True)
-        else:
-            st.success(
-                "✅ Toutes les features nullables sont dans les bornes attendues."
-            )
-
-
-# ════════════════════════════════════════════════════════════════════════════════
-# TAB 5 — LOG EXPLORER
-# ════════════════════════════════════════════════════════════════════════════════
-with tab_logs:
-    st.subheader("Explorateur de logs")
-
-    col_filter, col_search = st.columns([2, 3])
-    with col_filter:
-        filter_success = st.radio(
-            "Afficher",
-            ["Tous", "Succès seulement", "Erreurs seulement"],
-            horizontal=True,
-        )
-    with col_search:
-        search_id = st.text_input(
-            "Filtrer par request_id (partiel)", placeholder="uuid…"
-        )
-
-    if filter_success == "Succès seulement":
-        view = pred_df_f[pred_df_f["success"]]
-    elif filter_success == "Erreurs seulement":
-        view = pred_df_f[~pred_df_f["success"]]
-    else:
-        view = pred_df_f
-
-    if search_id:
-        view = view[view["request_id"].str.contains(search_id, na=False)]
-
-    display_cols = [
-        "timestamp",
-        "request_id",
-        "success",
-        "probability",
-        "prediction_label",
-        "latency_ms",
-        "error",
-    ] + [c for c in NUMERICAL_FEATURES if c in view.columns]
-    display_cols = [c for c in display_cols if c in view.columns]
-
-    st.dataframe(
-        view[display_cols].sort_values("timestamp", ascending=False).head(500),
-        use_container_width=True,
-    )
-    st.caption(
-        f"Affichage des 500 entrées les plus récentes (total filtré : {len(view):,})"
     )
 
+    evaluation = report.run(
+        current_data=test_data,
+        reference_data=ref_data,
+    )
 
-# ════════════════════════════════════════════════════════════════════════════════
-# TAB 6 — PERF
-# ════════════════════════════════════════════════════════════════════════════════
+    evaluation.save_html(str(FILE_DRIFT_REPORT))
 
-with tab_perf:
-    st.subheader("Performance Monitoring")
 
-    if successful_f.empty:
-        st.info("No performance data available.")
-    else:
-        c1, c2, c3, c4 = st.columns(4)
+def generate_quality_report() -> None:
+    """Generate and save the data summary report."""
+    ref_data, test_data = build_evidently_datasets()
 
-        c1.metric(
-            "Inference P50",
-            f"{successful_f['inference_ms'].quantile(0.50):.1f} ms",
-        )
+    report = Report(
+        [
+            DataSummaryPreset(),
+        ]
+    )
 
-        c2.metric(
-            "Inference P95",
-            f"{successful_f['inference_ms'].quantile(0.95):.1f} ms",
-        )
+    evaluation = report.run(
+        current_data=test_data,
+        reference_data=ref_data,
+    )
 
-        c3.metric(
-            "CPU Avg",
-            f"{successful_f['cpu_percent'].mean():.1f} %",
-        )
+    evaluation.save_html(str(FILE_QUALITY_REPORT))
 
-        c4.metric(
-            "RAM Avg",
-            f"{successful_f['memory_mb'].mean():.0f} MB",
-        )
 
+def display_html_report(path: Path, height: int = 1000) -> None:
+    """Display a saved HTML report."""
+    with open(path, "r", encoding="utf-8") as f:
+        st.components.v1.html(f.read(), height=height, scrolling=True)
+
+
+with tab2:
+    st.header("Surveillance de la dérive des données")
+
+    col_1, col_2 = st.columns(2)
+
+    with col_1:
+        if st.button("Générer le rapport de dérive"):
+            with st.spinner("Génération du rapport de dérive..."):
+                try:
+                    generate_drift_report()
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erreur lors de la génération du rapport de dérive : {e}")
+
+    with col_2:
+        if st.button("Générer le rapport qualité"):
+            with st.spinner("Génération du rapport qualité..."):
+                try:
+                    generate_quality_report()
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erreur lors de la génération du rapport qualité : {e}")
+
+    if FILE_DRIFT_REPORT.exists():
+        st.success("Rapport de dérive disponible.")
+        with st.expander("Afficher le rapport de dérive", expanded=True):
+            display_html_report(FILE_DRIFT_REPORT, height=1000)
+
+    if FILE_QUALITY_REPORT.exists():
+        st.success("Rapport qualité disponible.")
+        with st.expander("Afficher le rapport qualité"):
+            display_html_report(FILE_QUALITY_REPORT, height=1000)
+
+
+# %% TAB 3 : Optimisation de l’inférence modèle
+
+with tab3:
+    st.header("⚡ Optimisation de l’inférence modèle")
+
+    st.markdown("""
+    Analyse des performances d’inférence afin d’identifier les goulots d’étranglement
+    et de justifier les optimisations du modèle en production.
+    """)
+
+    # Keep reports after Streamlit reruns
+    if "profiling_report" not in st.session_state:
+        st.session_state["profiling_report"] = None
+
+    if "benchmark_report" not in st.session_state:
+        st.session_state["benchmark_report"] = None
+
+    col_run_1, col_run_2 = st.columns(2)
+
+    with col_run_1:
+        run_profiling = st.button("Lancer le profiling (50 inférences)")
+
+    with col_run_2:
+        run_benchmark = st.button("Lancer le benchmark LightGBM vs ONNX")
+
+    if run_profiling:
+        with st.spinner("Analyse des performances en cours..."):
+            ref_df = get_reference_df()
+            sample_features = ref_df.iloc[0].to_dict()
+
+            def run_perf_test():
+                """Run one model inference for profiling."""
+                model, expected_features, _ = get_model()
+                X = pd.DataFrame([sample_features])[expected_features]
+                X = X.replace({None: np.nan}).astype(float)
+                model.predict_proba(X)
+
+            # Profile repeated inferences
+            pr = cProfile.Profile()
+            pr.enable()
+
+            for _ in range(50):
+                run_perf_test()
+
+            pr.disable()
+
+            # Extract profiling stats
+            stats = pstats.Stats(pr)
+            stats.strip_dirs()
+
+            data = []
+            for func_key, (cc, nc, tt, ct, _) in stats.stats.items():
+                filename, line_number, func_name = func_key
+                data.append(
+                    {
+                        "Fonction": f"{func_name} ({filename}:{line_number})",
+                        "Nombre d’appels": nc,
+                        "Temps propre (s)": tt,
+                        "Temps cumulé (s)": ct,
+                    }
+                )
+
+            df_profile = (
+                pd.DataFrame(data)
+                .sort_values(by="Temps propre (s)", ascending=False)
+                .head(15)
+            )
+
+            st.session_state["profiling_report"] = df_profile
+
+    if run_benchmark:
+        with st.spinner("Benchmark en cours (100 inférences × 2)..."):
+            import time
+
+            from credit_scoring.serving.inference import (
+                get_model,
+                get_onnx_session,
+                get_reference_df,
+            )
+
+            ref_df = get_reference_df()
+            model, expected_features, _ = get_model()
+            session = get_onnx_session()
+
+            # Build input from already encoded reference data
+            sample = ref_df.iloc[0]
+            X_lgbm = (
+                pd.DataFrame([sample])[expected_features]
+                .replace({None: np.nan})
+                .astype(float)
+            )
+            X_onnx = X_lgbm.astype(np.float32)
+
+            input_name = session.get_inputs()[0].name
+            N = 100
+
+            # Warm-up to avoid first-call overhead
+            model.predict_proba(X_lgbm)
+            session.run(None, {input_name: X_onnx.values})
+
+            # Benchmark LightGBM
+            times_lgbm = []
+            for _ in range(N):
+                t0 = time.perf_counter()
+                model.predict_proba(X_lgbm)
+                times_lgbm.append((time.perf_counter() - t0) * 1000)
+
+            # Benchmark ONNX Runtime
+            times_onnx = []
+            for _ in range(N):
+                t0 = time.perf_counter()
+                session.run(None, {input_name: X_onnx.values})
+                times_onnx.append((time.perf_counter() - t0) * 1000)
+
+            mean_lgbm = np.mean(times_lgbm)
+            mean_onnx = np.mean(times_onnx)
+            speedup = mean_lgbm / mean_onnx
+            theoretical_rps = 1000 / mean_onnx
+
+            results = pd.DataFrame(
+                {
+                    "Modèle": ["LightGBM standard", "LightGBM optimisé ONNX"],
+                    "Latence moyenne (ms)": [mean_lgbm, mean_onnx],
+                    "P95 (ms)": [
+                        np.percentile(times_lgbm, 95),
+                        np.percentile(times_onnx, 95),
+                    ],
+                    "P99 (ms)": [
+                        np.percentile(times_lgbm, 99),
+                        np.percentile(times_onnx, 99),
+                    ],
+                }
+            )
+
+            st.session_state["benchmark_report"] = {
+                "results": results,
+                "mean_lgbm": mean_lgbm,
+                "mean_onnx": mean_onnx,
+                "speedup": speedup,
+                "theoretical_rps": theoretical_rps,
+            }
+
+    # Display both reports if available
+    if st.session_state["profiling_report"] is not None:
         st.divider()
+        st.subheader("Rapport de profiling")
 
-        st.markdown("### Inference time over time")
-
-        inf_ts = (
-            successful_f.set_index("timestamp")["inference_ms"].resample("1h").mean()
+        st.dataframe(
+            st.session_state["profiling_report"],
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Temps propre (s)": st.column_config.NumberColumn(format="%.4f s"),
+                "Temps cumulé (s)": st.column_config.NumberColumn(format="%.4f s"),
+            },
         )
 
-        st.line_chart(inf_ts)
-
-        st.markdown("### CPU usage over time")
-
-        cpu_ts = (
-            successful_f.set_index("timestamp")["cpu_percent"].resample("1h").mean()
+        st.info(
+            "Ce tableau identifie les fonctions les plus coûteuses en temps CPU "
+            "pendant les inférences."
         )
 
-        st.line_chart(cpu_ts)
+    if st.session_state["benchmark_report"] is not None:
+        st.divider()
+        st.subheader("Benchmark d’inférence : modèle standard vs ONNX")
 
-        st.markdown("### Memory usage over time")
+        benchmark = st.session_state["benchmark_report"]
+        results = benchmark["results"]
+        mean_lgbm = benchmark["mean_lgbm"]
+        mean_onnx = benchmark["mean_onnx"]
+        speedup = benchmark["speedup"]
+        theoretical_rps = benchmark["theoretical_rps"]
 
-        mem_ts = successful_f.set_index("timestamp")["memory_mb"].resample("1h").mean()
+        st.dataframe(
+            results,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Latence moyenne (ms)": st.column_config.NumberColumn(format="%.3f ms"),
+                "P95 (ms)": st.column_config.NumberColumn(format="%.3f ms"),
+                "P99 (ms)": st.column_config.NumberColumn(format="%.3f ms"),
+            },
+        )
 
-        st.line_chart(mem_ts)
+        left, center, right = st.columns([1, 2, 1])
+
+        with center:
+            fig = px.bar(
+                results,
+                x="Modèle",
+                y="Latence moyenne (ms)",
+                text="Latence moyenne (ms)",
+                title="Latence moyenne par modèle",
+            )
+
+            fig.update_traces(
+                texttemplate="%{text:.3f} ms",
+                textposition="outside",
+            )
+
+            fig.update_layout(
+                height=320,
+                width=520,
+                showlegend=False,
+                margin=dict(l=20, r=20, t=50, b=40),
+                yaxis_title="Latence moyenne (ms)",
+                xaxis_title=None,
+            )
+
+            st.plotly_chart(fig, use_container_width=False)
+
+        st.success(f"🚀 ONNX est **{speedup:.1f}×** plus rapide en moyenne.")
+
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric(
+            "Latence moyenne LightGBM",
+            f"{mean_lgbm:.2f} ms",
+        )
+
+        col2.metric(
+            "Latence moyenne ONNX",
+            f"{mean_onnx:.3f} ms",
+            delta=f"-{mean_lgbm - mean_onnx:.2f} ms",
+            delta_color="inverse",
+        )
+
+        col3.metric(
+            "Accélération",
+            f"{speedup:.1f}×",
+            delta="vs LightGBM standard",
+        )
+
+        st.info(
+            f"""
+            **Analyse** : la version ONNX réduit fortement le temps d’inférence
+            en exécutant un graphe optimisé via ONNX Runtime, avec moins de surcoût Python.
+
+            À **{mean_onnx:.3f} ms par inférence**, l’ordre de grandeur théorique est
+            d’environ **{theoretical_rps:,.0f} inférences/seconde** dans ce test local.
+            """
+        )
