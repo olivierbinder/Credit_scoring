@@ -7,6 +7,11 @@ sdk: docker
 pinned: false
 ---
 
+```mermaid
+graph LR
+    A[Code] --> B[Test]
+```
+
 # Credit Scoring – End-to-End ML Pipeline
 
 ## Purpose

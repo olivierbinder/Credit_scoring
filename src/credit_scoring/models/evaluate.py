@@ -1,5 +1,5 @@
-# IMPORTS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# src/credit_scoring/models/evaluate.py
+# %%  IMPORTS                                                                          .
 import matplotlib.pyplot as plt
 import mlflow
 from sklearn.metrics import (
@@ -17,8 +17,7 @@ from credit_scoring.logger import logger
 from credit_scoring.utils import timer
 
 
-# EVALUATION FUNCTIONS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  EVALUATION FUNCTIONS                                                             .
 def compute_business_cost(y_true, y_pred, cost_fn=10, cost_fp=1):
     """Calculate average business cost per sample (normalized)."""
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
@@ -42,6 +41,9 @@ def evaluate_and_log_metrics(y, y_proba, y_pred, dataset_name):
         f"{dataset_name}_fn": fn / n,
         f"{dataset_name}_tn": tn / n,
         f"{dataset_name}_fp": fp / n,
+        # Summary
+        f"{dataset_name}_positive_rate": y_pred.mean(),
+        f"{dataset_name}_actual_positive_rate": y.mean(),
         # Secondary
         f"{dataset_name}_log_loss": log_loss(y, y_proba),
         f"{dataset_name}_precision": precision_score(y, y_pred),
@@ -76,8 +78,7 @@ def generate_and_log_plots(model, X, y, y_pred, dataset_name, threshold=0.5):
     plt.close(fig_roc)
 
 
-# MAIN FUNCTION
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  MAIN FUNCTION                                                                    .
 def evaluate_and_log(model, X, y, dataset_name, threshold=0.5):
     y_proba = model.predict_proba(X)[:, 1]
     y_pred = (y_proba >= threshold).astype(int)

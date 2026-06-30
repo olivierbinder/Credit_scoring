@@ -1,6 +1,4 @@
-# IMPORTS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
+# %%  IMPORTS                                                                          .
 import matplotlib.pyplot as plt
 import mlflow
 import numpy as np
@@ -11,15 +9,13 @@ from credit_scoring.logger import logger
 from credit_scoring.utils import timer
 
 
-# FEATURE IMPORTANCE EXTRACTION
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  FEATURE IMPORTANCE EXTRACTION                                                    .
 @timer
 def extract_and_plot_importance(model, feature_names: list, max_features: int = 25):
     """
     Extracts global weights and logs to the currently active MLflow run.
     """
     # Model-specific importances
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     if hasattr(model, "coef_"):
         importances = model.coef_[0]
         label = "Coefficient Value (Directional)"
@@ -33,7 +29,6 @@ def extract_and_plot_importance(model, feature_names: list, max_features: int = 
         return
 
     # Log importances to MLflow
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     df_imp = (
         pd.DataFrame(
             {
@@ -53,8 +48,7 @@ def extract_and_plot_importance(model, feature_names: list, max_features: int = 
         "explain/feature_importance_top.json",
     )
 
-    # Generate and logFeature Importance Plot
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+    # Generate and log feature importance plot
     df_plot = df_imp.head(max_features).sort_values("absolute_importance")
 
     fig, ax = plt.subplots(figsize=(8, max(4, max_features * 0.3)))
@@ -71,15 +65,13 @@ def extract_and_plot_importance(model, feature_names: list, max_features: int = 
     return df_imp
 
 
-# SHAP VALUES EXTRACTION
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  SHAP VALUES EXTRACTION                                                           .
 @timer
 def extract_and_plot_shap(model, X_sample: pd.DataFrame, max_features: int = 25):
     """
     Computes SHAP values and logs to the currently active MLflow run.
     """
     # Compute SHAP values
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     try:
         explainer = shap.Explainer(model, X_sample)
         shap_values = explainer(X_sample)
@@ -96,7 +88,6 @@ def extract_and_plot_shap(model, X_sample: pd.DataFrame, max_features: int = 25)
         values = values[:, :, 1]
 
     # Log SHAP importances to MLflow
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
     mean_abs_shap = np.abs(values).mean(axis=0)
 
     df_shap = (
@@ -117,8 +108,7 @@ def extract_and_plot_shap(model, X_sample: pd.DataFrame, max_features: int = 25)
         "explain/shap_importance_all_top.json",
     )
 
-    # Generate and log SHAP Beeswarm Plot
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+    # Generate and log SHAP beeswarm plot
     fig = plt.figure(figsize=(8, max(4, max_features * 0.3)))
     shap.summary_plot(values, X_sample, max_display=max_features, show=False)
     fig = plt.gcf()
@@ -127,8 +117,7 @@ def extract_and_plot_shap(model, X_sample: pd.DataFrame, max_features: int = 25)
     mlflow.log_figure(fig, "explain/shap_importance_plot_beeswarm.png")
     plt.close(fig)
 
-    # Generate and log SHAP Importance Bar Plot
-    # ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+    # Generate and log SHAP importance bar plot
     df_plot = df_shap.head(max_features).sort_values("mean_abs_shap")
 
     fig2, ax = plt.subplots(figsize=(8, max(4, max_features * 0.3)))

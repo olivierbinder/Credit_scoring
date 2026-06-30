@@ -9,8 +9,22 @@ mlflow.db
 mlflow.db-journal
 
 # --- DATA ---
-/data
-logs/
+
+logs/running_logs.log
+# Ignore data files but keep folder structure
+data/raw/*
+data/processed/*
+data/feature_selection/*
+data/description/*
+data/Kaggle_predictions/*
+
+# Keep directories
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/feature_selection/.gitkeep
+
+# --- DOC ---
+/site
 
 # --- ENVIRONMENTS ---
 .env
@@ -18,7 +32,8 @@ logs/
 env/
 venv/
 
-# --- PYTHON ---
+# --- PYTHON & CACHE---
+.cache
 __pycache__/
 *.py[cod]
 *$py.class

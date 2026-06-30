@@ -1,6 +1,5 @@
-# IMPORTS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-
+# src/credit_scoring/models/train.py
+# %%  IMPORTS                                                                          .
 import numpy as np
 import pandas as pd
 from catboost import CatBoostClassifier
@@ -30,55 +29,55 @@ SUPPORTS_EVAL_SET = {"lightgbm", "xgboost"}
 SUPPORTS_SAMPLE_WEIGHT = {"lightgbm", "log_reg", "random_forest"}
 
 
-# TRAIN FUNCTION
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  TRAIN FUNCTION                                                                   .
 @timer
 def train_model(
     model_type: str,
     X_train: pd.DataFrame,
     y_train: np.ndarray,
+    use_sample_weight: bool = False,
     **kwargs,
 ):
     if model_type not in MODEL_REGISTRY:
         raise ValueError(f"❌ Model '{model_type}' unknown.")
 
     model = MODEL_REGISTRY[model_type](**kwargs)
-    sw = np.where(y_train == 1, 10, 1)
 
-    if model_type in ("lightgbm", "log_reg", "random_forest"):
+    if use_sample_weight and model_type in SUPPORTS_SAMPLE_WEIGHT:
+        sw = np.where(y_train == 1, 10, 1)
         model.fit(X_train, y_train, sample_weight=sw)
     else:
-        # dummy, catboost (gère le déséquilibre via auto_class_weights dans kwargs)
         model.fit(X_train, y_train)
+
     return model
 
 
-# CROSS VALIDATION
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  CROSS VALIDATION                                                                 .
 def business_cost_scorer(y_true, y_pred):
     """Calculate average business cost"""
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
     return float(((fn * 10) + (fp * 1)) / len(y_true))
 
 
-def optimize_threshold(model, X_val, y_val):
-    """Trouve le seuil qui minimise le business_cost sur le set de validation."""
+def optimize_threshold(model, X_val, y_val, cost_fn=10, cost_fp=1):
+    """Find the threshold that minimizes business cost on a calibration set."""
     if not hasattr(model, "predict_proba"):
         return 0.5
-    else:
-        y_probs = model.predict_proba(X_val)[:, 1]
-        best_threshold = 0.5
-        min_cost = float("inf")
 
-        # On teste 100 seuils pour trouver le meilleur
-        for threshold in np.linspace(0.01, 0.99, 100):
-            y_pred = (y_probs >= threshold).astype(int)
-            cost = business_cost_scorer(y_val, y_pred)
-            if cost < min_cost:
-                min_cost = cost
-                best_threshold = threshold
+    y_proba = model.predict_proba(X_val)[:, 1]
 
-    return best_threshold
+    best_threshold = 0.5
+    min_cost = float("inf")
+
+    for threshold in np.linspace(0.01, 0.99, 200):
+        y_pred = (y_proba >= threshold).astype(int)
+        cost = business_cost_scorer(y_val, y_pred)
+
+        if cost < min_cost:
+            min_cost = cost
+            best_threshold = threshold
+
+    return float(best_threshold)
 
 
 @timer
@@ -94,17 +93,17 @@ def run_cross_validation(
         X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
         y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
 
-        # 1. Entraînement robuste (avec early stopping et poids)
+        # Train model
         model = train_model(model_type, X_train, y_train, **kwargs)
 
-        # 2. Prédictions
+        # Predict probabilities
         y_proba = model.predict_proba(X_val)[:, 1]
 
-        # 3. Optimisation du seuil sur CE fold uniquement (très important !)
+        # Tune threshold on this fold only
         best_thresh = optimize_threshold(model, X_val, y_val)
         y_pred = (y_proba >= best_thresh).astype(int)
 
-        # 4. Calcul des scores
+        # Compute metrics
         cv_results["roc_auc"].append(roc_auc_score(y_val, y_proba))
         cv_results["business_cost"].append(business_cost_scorer(y_val, y_pred))
 

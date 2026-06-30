@@ -1,9 +1,7 @@
-# IMPORTS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  IMPORTS                                                                          .
 from pathlib import Path
 
-# SETTINGS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  SETTINGS                                                                         .
 RANDOM_STATE: int = 42
 DTYPE_COLORS: dict[str, str] = {
     "float64": "#72efdd",
@@ -11,8 +9,7 @@ DTYPE_COLORS: dict[str, str] = {
     "object": "#ffb5a7",
     "bool": "#f5fbb9",
 }
-# PATHS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  # PATHS                                                                          .
 # Project root
 DIR_ROOT = Path(__file__).resolve().parents[2]
 
@@ -24,7 +21,7 @@ DIR_CONFIG = DIR_ROOT / "config"
 DIR_PROJ = DIR_ROOT / "src" / "credit_scoring"
 
 # Desciption file
-FILE_DESC = DIR_DATA / "description" / "HomeCredit_columns_description.csv"
+DESC_RAW_FILES = DIR_DATA / "description" / "HomeCredit_columns_description.csv"
 
 # Raw files
 FILE_APP_TEST = DIR_DATA_RAW / "application_test.csv"
@@ -41,81 +38,154 @@ X_TRAIN_PROC_PATH = DIR_DATA_PROCESSED / "X_train_proc.csv"
 X_TEST_PROC_PATH = DIR_DATA_PROCESSED / "X_test_proc.csv"
 Y_TRAIN_PROC_PATH = DIR_DATA_PROCESSED / "y_train.csv"
 Y_TEST_PROC_PATH = DIR_DATA_PROCESSED / "y_test.csv"
-DF_PROC_PATH = DIR_DATA_PROCESSED / "df_proc.parquet"
+FILE_DATA_PROCESSED = DIR_DATA_PROCESSED / "df_proc.parquet"
 PIPELINE_PATH = DIR_DATA_PROCESSED / "full_pipeline.pkl"
 
 # MLFlow DB
-MLFLOW_DB_PATH = DIR_ROOT / "mlflow.db"
-MLFLOW_TRACKING_URI = f"sqlite:///{MLFLOW_DB_PATH}"
-PROD_MODEL_PATH = DIR_PROJ / "serving" / "model"
-REF_DB_PATH = DIR_PROJ / "serving" / "db" / "reference.parquet"
+ML_FLOW_DB = DIR_ROOT / "mlflow.db"
+MLFLOW_TRACKING_URI = f"sqlite:///{ML_FLOW_DB}"
+PROD_MODEL = DIR_PROJ / "serving" / "model"
+PROD_REFERENCE = DIR_PROJ / "serving" / "db" / "reference.parquet"
+PROD_TEST = DIR_PROJ / "serving" / "db" / "test.parquet"
 
 
-# ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-# === Feature Names ===
-# ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-# From raw files
+# Default paths — overridable via st.session_state set by the main app
+FILE_PRED = DIR_ROOT / "logs/predictions.jsonl"
+FILE_API = DIR_ROOT / "logs/api_calls.jsonl"
+FILE_REFERENCE = DIR_ROOT / "data/processed/reference.parquet"
+FILE_DRIFT_REPORT = DIR_ROOT / "reports/drift_report.html"
+FILE_QUALITY_REPORT = DIR_ROOT / "reports/quality_report.html"
+# %%  # FEATURES                                                                       .
+# Final model features
+NUMERICAL_FEATURES = [
+    "EXT_SOURCE_1",
+    "EXT_SOURCE_2",
+    "EXT_SOURCE_3",
+    "AMT_ANNUITY",
+    "AMT_GOODS_PRICE",
+    "DAYS_BIRTH",
+    "DAYS_EMPLOYED",
+    "PAYMENT_RATE",
+    "OWN_CAR_AGE",
+    "INSTAL_DPD_MEAN",
+    "INSTAL_AMT_PAYMENT_SUM",
+    "POS_CNT_INSTALMENT_FUTURE_MEAN",
+    "POS_SK_DPD_DEF_MEAN",
+    "PREV_CNT_PAYMENT_MEAN",
+    "PREV_DAYS_LAST_DUE_1ST_VERSION_MEAN",
+    "ACTIVE_DAYS_CREDIT_MAX",
+    "CC_CNT_DRAWINGS_ATM_CURRENT_MEAN",
+    "CC_CNT_DRAWINGS_CURRENT_VAR",
+]
 
+CATEGORICAL_FEATURES = ["CODE_GENDER", "NAME_EDUCATION_TYPE"]
+
+NULLABLE_FEATURES = [
+    "EXT_SOURCE_1",
+    "EXT_SOURCE_3",
+    "DAYS_EMPLOYED",
+    "OWN_CAR_AGE",
+    "ACTIVE_DAYS_CREDIT_MAX",
+    "CC_CNT_DRAWINGS_ATM_CURRENT_MEAN",
+    "CC_CNT_DRAWINGS_CURRENT_VAR",
+]
+# Cat Values
+EDUCATION_OPTIONS = [
+    "Lower secondary",
+    "Secondary / secondary special",
+    "Incomplete higher",
+    "Higher education",
+    "Academic degree",
+]
 
 # Engineered Features
+ENGINEERED_FEATURES = [
+    "INSTAL_DPD_MEAN",
+    "INSTAL_AMT_PAYMENT_SUM",
+    "POS_CNT_INSTALMENT_FUTURE_MEAN",
+    "POS_SK_DPD_DEF_MEAN",
+    "PREV_CNT_PAYMENT_MEAN",
+    "PREV_DAYS_LAST_DUE_1ST_VERSION_MEAN",
+    "ACTIVE_DAYS_CREDIT_MAX",
+    "CC_CNT_DRAWINGS_ATM_CURRENT_MEAN",
+    "CC_CNT_DRAWINGS_CURRENT_VAR",
+]
 
-# Target Features
+# Feature Groups for Dashboard Layout
+FEATURE_GROUPS = {
+    "📈 Scores externes de solvabilité": [
+        "EXT_SOURCE_1",
+        "EXT_SOURCE_2",
+        "EXT_SOURCE_3",
+    ],
+    "👤 Profil du demandeur": [
+        "CODE_GENDER",
+        "NAME_EDUCATION_TYPE",
+        "DAYS_BIRTH",
+        "DAYS_EMPLOYED",
+        "OWN_CAR_AGE",
+    ],
+    "💰 Caractéristiques du prêt": ["AMT_ANNUITY", "AMT_GOODS_PRICE", "PAYMENT_RATE"],
+    "📅 Historique de remboursement": [
+        "INSTAL_DPD_MEAN",
+        "INSTAL_AMT_PAYMENT_SUM",
+        "POS_CNT_INSTALMENT_FUTURE_MEAN",
+        "POS_SK_DPD_DEF_MEAN",
+    ],
+    "🏦 Historique de crédit": [
+        "PREV_CNT_PAYMENT_MEAN",
+        "PREV_DAYS_LAST_DUE_1ST_VERSION_MEAN",
+        "ACTIVE_DAYS_CREDIT_MAX",
+    ],
+    "💳 Utilisation carte de crédit": [
+        "CC_CNT_DRAWINGS_ATM_CURRENT_MEAN",
+        "CC_CNT_DRAWINGS_CURRENT_VAR",
+    ],
+}
 
-# Features Groups
 
-# ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-# === Source Mappings ===
-# ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-# MAP_TRANSACTIONS = {}
+# Mappings
+GENDER_MAP = {
+    "M": 1.0,
+    "F": 0.0,
+}
 
+EDUCATION_MAP = {
+    "Lower secondary": 0.0,
+    "Secondary / secondary special": 1.0,
+    "Incomplete higher": 2.0,
+    "Higher education": 3.0,
+    "Academic degree": 4.0,
+}
 
-"""
-import sys
-import yaml
-from pathlib import Path
-from typing import Any, Dict
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from credit_scoring.logger import logger
+GENDER_INVERSE = {v: k for k, v in GENDER_MAP.items()}
+EDUCATION_INVERSE = {v: k for k, v in EDUCATION_MAP.items()}
 
-PROJ_ROOT = Path(__file__).resolve().parents[2]
-
-class Config(BaseSettings):
-    model_config = SettingsConfigDict(env_file=PROJ_ROOT / ".env", extra="ignore")
-    RANDOM_STATE: int = 42
-    PATHS: Dict[str, Any] = Field(default_factory=dict)
-    COLUMNS: Dict[str, Any] = Field(default_factory=dict)
-    PARAMS: Dict[str, Any] = Field(default_factory=dict)
-
-    @classmethod
-    def load(cls) -> "Config":
-        try:
-            instance = cls()
-            config_dir = PROJ_ROOT / "config"
-            def _read_yaml(name: str) -> dict:
-                path = config_dir / f"{name}.yaml"
-                return yaml.safe_load(path.read_text()) if path.exists() else {}
-
-            p_yml = _read_yaml("project")
-            f_yml = _read_yaml("features")
-            m_yml = _read_yaml("model")
-
-            raw = PROJ_ROOT / p_yml.get("directories", {}).get("raw", "data/raw")
-            instance.PATHS = {
-                "RAW": raw,
-                "PROCESSED": PROJ_ROOT / p_yml.get("directories", {}).get("processed", "data/processed")
-            }
-            for k, v in p_yml.get("files", {}).items():
-                instance.PATHS[k.upper()] = raw / v
-
-            instance.COLUMNS = f_yml.get("columns", {})
-            instance.PARAMS = m_yml.get("params", {})
-            instance.RANDOM_STATE = p_yml.get("random_state", 42)
-            logger.info("✅ Configuration loaded.")
-            return instance
-        except Exception as e:
-            print(f"❌ Config Error: {e}")
-            sys.exit(1)
-
-settings = Config.load()
-"""
+FEATURE_LABELS = {
+    # Scores externes
+    "EXT_SOURCE_1": "Score externe 1",
+    "EXT_SOURCE_2": "Score externe 2",
+    "EXT_SOURCE_3": "Score externe 3",
+    # Profil du demandeur
+    "CODE_GENDER": "Genre du demandeur",
+    "NAME_EDUCATION_TYPE": "Niveau d’études",
+    "DAYS_BIRTH": "Âge du demandeur (jours)",
+    "DAYS_EMPLOYED": "Ancienneté professionnelle (jours)",
+    "OWN_CAR_AGE": "Ancienneté du véhicule (années)",
+    # Caractéristiques du prêt
+    "AMT_ANNUITY": "Mensualité prévue (€)",
+    "AMT_GOODS_PRICE": "Prix du bien financé (€)",
+    "PAYMENT_RATE": "Ratio mensualité / montant du crédit",
+    # Historique de remboursement
+    "INSTAL_DPD_MEAN": "Retard moyen de paiement (jours)",
+    "INSTAL_AMT_PAYMENT_SUM": "Montant total remboursé (€)",
+    "POS_CNT_INSTALMENT_FUTURE_MEAN": "Échéances restantes moyennes (mois)",
+    "POS_SK_DPD_DEF_MEAN": "Retard moyen avec tolérance (jours)",
+    # Historique de crédit
+    "PREV_CNT_PAYMENT_MEAN": "Nombre moyen d’échéances des anciens crédits (mois)",
+    "PREV_DAYS_LAST_DUE_1ST_VERSION_MEAN": "Fin prévue moyenne des anciens crédits (jours)",
+    "ACTIVE_DAYS_CREDIT_MAX": "Ancienneté du dernier crédit actif (jours)",
+    # Carte de crédit
+    "CC_CNT_DRAWINGS_ATM_CURRENT_MEAN": "Nombre moyen de retraits au distributeur par mois",
+    "CC_CNT_DRAWINGS_CURRENT_VAR": "Variabilité mensuelle du nombre d’opérations carte",
+}

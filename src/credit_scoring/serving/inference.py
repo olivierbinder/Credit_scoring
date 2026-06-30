@@ -1,50 +1,25 @@
 # src/credit_scoring/serving/inference.py
-# IMPORTS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  IMPORTS                                                                          .
+
 from typing import Literal
 
 import mlflow
 import numpy as np
+import onnxruntime as ort
 import pandas as pd
 import yaml
 from pydantic import BaseModel, Field
 
-from credit_scoring.config import PROD_MODEL_PATH, REF_DB_PATH
-from credit_scoring.logger import logger
-from credit_scoring.serving.constants import (
+from credit_scoring.config import (
     EDUCATION_MAP,
     GENDER_MAP,
+    PROD_MODEL,
+    PROD_REFERENCE,
 )
-
-# MODEL ARTIFACTS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
-_model = None
-_features = None
-_reference_df = None
-_threshold = None
+from credit_scoring.logger import logger
 
 
-def get_model():
-    global _model, _features, _threshold
-    if _model is None:
-        _model = mlflow.lightgbm.load_model(PROD_MODEL_PATH)
-        _features = _model.feature_name_  # booster_.feature_name()
-        with open(PROD_MODEL_PATH / "MLmodel") as f:
-            mlmodel = yaml.safe_load(f)
-        _threshold = mlmodel["metadata"]["optimal_threshold"]
-        logger.info("🆗 Model loaded")
-    return _model, _features, _threshold
-
-
-def get_reference_df():
-    global _reference_df
-    if _reference_df is None:
-        _reference_df = pd.read_parquet(REF_DB_PATH)
-    return _reference_df
-
-
-# INPUT SCHEMA
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  INPUT SCHEMA                                                                  .
 class CreditScoringInput(BaseModel):
     # External scores
     EXT_SOURCE_1: float | None = Field(None, ge=0, le=1)
@@ -91,8 +66,47 @@ class CreditScoringInput(BaseModel):
     CC_CNT_DRAWINGS_CURRENT_VAR: float | None = Field(None, ge=0)
 
 
-# FEATURE TRANSFORMATIONS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  ARTIFACTS                                                                        .
+_model = None
+_features = None
+_reference_df = None
+_threshold = None
+
+
+def get_model():
+    global _model, _features, _threshold
+    if _model is None:
+        _model = mlflow.lightgbm.load_model(PROD_MODEL)
+        _features = _model.feature_name_  # booster_.feature_name()
+        with open(PROD_MODEL / "MLmodel") as f:
+            mlmodel = yaml.safe_load(f)
+        _threshold = mlmodel["metadata"]["optimal_threshold"]
+        logger.info("🆗 Model loaded")
+    return _model, _features, _threshold
+
+
+def get_reference_df():
+    global _reference_df
+    if _reference_df is None:
+        _reference_df = pd.read_parquet(PROD_REFERENCE)
+    return _reference_df
+
+
+_onnx_session = None
+
+
+def get_onnx_session():
+    global _onnx_session
+    if _onnx_session is None:
+        onnx_path = str(PROD_MODEL / "model.onnx")
+        _onnx_session = ort.InferenceSession(
+            onnx_path,
+            providers=["CPUExecutionProvider"],
+        )
+    return _onnx_session
+
+
+# %%  FEATURE TRANSFORMATIONS                                                          .
 def encode(input_data: CreditScoringInput) -> dict:
     features = input_data.model_dump()
 
@@ -102,8 +116,7 @@ def encode(input_data: CreditScoringInput) -> dict:
     return features
 
 
-# DATA ACCESS
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  DATA ACCESS                                                          .
 def lookup(sk_id: int) -> dict | None:
     reference = get_reference_df()
     row = reference.loc[reference["SK_ID_CURR"] == sk_id]
@@ -117,8 +130,7 @@ def lookup(sk_id: int) -> dict | None:
     }
 
 
-# INFERENCE
-# ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+# %%  INFERENCE                                                          .
 def predict(
     input_data: CreditScoringInput,
 ) -> dict:
@@ -131,6 +143,26 @@ def predict(
     X = X.astype(float)
 
     probability = float(model.predict_proba(X)[0, 1])
+
+    return {
+        "probability": round(probability, 4),
+        "prediction": (
+            "Likely to default" if probability >= threshold else "Not likely to default"
+        ),
+    }
+
+
+def predict_onnx(input_data: CreditScoringInput) -> dict:
+    _, expected_features, threshold = get_model()
+    session = get_onnx_session()
+
+    features = encode(input_data)
+    X = pd.DataFrame([features])[expected_features]
+    X = X.replace({None: np.nan}).astype(np.float32)  # ONNX exige float32
+
+    input_name = session.get_inputs()[0].name
+    proba = session.run(None, {input_name: X.values})[1]  # [1] = probas, [0] = classes
+    probability = float(proba[0][1])
 
     return {
         "probability": round(probability, 4),

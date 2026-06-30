@@ -11,12 +11,12 @@ experiment:
 models:
   lightgbm:
     n_estimators: 300
-    learning_rate: 0.03
+    learning_rate: 0.04
     num_leaves: 8
     colsample_bytree: 0.8
     subsample: 0.7
     max_depth: 4
-    reg_alpha: 1
+    reg_alpha: 1.1
     reg_lambda: 1
     min_split_gain: 0.02
     min_child_weight: 100

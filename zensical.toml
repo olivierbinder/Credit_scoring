@@ -1,0 +1,25 @@
+[project]
+site_name = "Credit Scoring MLOps"
+site_description = "Documentation de soutenance MLOps : déploiement, monitoring, optimisation et CI/CD."
+site_author = "Olivier"
+docs_dir = "docs"
+site_dir = "site"
+
+nav = [
+  {"Contexte" = "index.md"},
+  {"Monitoring" = "monitoring.md"},
+  {"Optimisation" = "optimisation.md"},
+  {"API déployée" = "api.md"},
+  {"CI/CD" = "cicd.md"},
+  {"Dépôt GitHub" = "depot.md"},
+  {"Démo soutenance" = "demo.md"}
+]
+
+[project.theme]
+features = [
+  "navigation.tabs",
+  "navigation.sections",
+  "navigation.path",
+  "toc.follow",
+  "content.code.copy"
+]
