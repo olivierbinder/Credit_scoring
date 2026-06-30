@@ -70,7 +70,6 @@ src/credit_scoring/
 scripts/
 |-- export_onnx.py
 |-- generate_base_for_inference.py
-|-- profile_inference.py
 |-- run_ft_selection_nb.py
 `-- run_ft_selection_ranking.py
 ```

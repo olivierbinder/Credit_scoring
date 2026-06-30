@@ -1,66 +1,53 @@
-# Pipeline CI/CD
+# CI/CD
 
 ## Objectif
 
-Le pipeline CI/CD automatise la validation et le déploiement de l'application.
+- Valider automatiquement le code.
+- Eviter de déployer une version non testée.
+- Déployer sur Hugging Face Spaces après succès de la CI sur `main`.
 
-L'objectif est de garantir qu'un changement de code :
+## Workflow CI
 
-1. déclenche les tests ;
-2. vérifie la qualité du code ;
-3. construit l'image Docker ;
-4. déploie l'API ou l'application sur Hugging Face Spaces.
+La CI se déclenche à chaque `push`.
 
-## Déclenchement
+Jobs :
 
-Le pipeline est déclenché par un événement GitHub, par exemple :
+- **lint** :
+  - installation des dépendances CI avec `uv` ;
+  - `ruff check src/ tests/` ;
+  - `ruff format --check src/ tests/`.
+- **test** :
+  - installation du projet avec le groupe CI ;
+  - exécution de `pytest`.
 
-- `push` sur la branche principale ;
-- pull request ;
-- modification du code applicatif ou des fichiers de configuration.
+## Workflow CD
 
-## Étapes typiques
+La CD ne part pas directement sur chaque branche.
 
-| Étape | Rôle |
-|---|---|
-| Checkout | Récupération du dépôt |
-| Setup Python | Installation de Python 3.12 |
-| uv sync | Installation des dépendances |
-| Tests | Exécution de `pytest` |
-| Lint | Contrôle du code avec `ruff` |
-| Docker build | Construction de l'image |
-| Deploy | Déploiement sur Hugging Face Spaces |
+- Elle écoute la fin du workflow `CI`.
+- Elle ne déploie automatiquement que sur `main`.
+- Elle vérifie que la conclusion de la CI est `success`.
+- Elle peut aussi être lancée manuellement avec `workflow_dispatch`.
 
-## Exemple de commandes
-
-```bash
-uv sync --all-groups
-uv run pytest
-uv run ruff check .
-docker build -t credit-scoring-api .
+```mermaid
+flowchart LR
+    A[Push branche] --> B[CI]
+    C[Merge main] --> D[CI main]
+    D -->|success| E[CD]
+    E --> F[Hugging Face Space]
+    D -->|failure| G[Pas de déploiement]
 ```
 
-## Déploiement Hugging Face Spaces
+## Gestion des fichiers lourds
 
-Le déploiement sur Hugging Face Spaces repose sur :
+- Les modèles et fichiers parquet sont suivis avec Git LFS.
+- Le workflow CD checkout les fichiers LFS.
+- Un `git lfs pull` explicite évite les objets manquants au push vers HF.
 
-- un `Dockerfile` ;
-- les fichiers applicatifs ;
-- les dépendances définies dans `pyproject.toml` ;
-- le pipeline GitHub Actions.
+## Points à montrer
 
-## Démonstration attendue
-
-Pendant la soutenance :
-
-1. faire une petite modification dans le code ou la documentation ;
-2. créer un commit ;
-3. pousser sur GitHub ;
-4. ouvrir l'onglet Actions ;
-5. montrer les jobs : tests, build Docker, déploiement ;
-6. ouvrir le Space déployé ;
-7. refaire un appel API pour valider le déploiement.
-
-## Message clé
-
-Le pipeline garantit que chaque changement est validé automatiquement avant d'être exposé en production.
+- Le fichier `.github/workflows/ci.yml`.
+- Le fichier `.github/workflows/cd.yml`.
+- Un run CI avec les jobs `lint` et `test`.
+- Un run CD déclenché après CI verte sur `main`.
+- Le commit déployé vers le Space Hugging Face.

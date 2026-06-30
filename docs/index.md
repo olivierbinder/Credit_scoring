@@ -1,49 +1,44 @@
 # Contexte de la mission
 
-## Objectif
+## Objectif métier
 
-L'objectif du projet est de mettre en production un modèle de **credit scoring** capable d'estimer le risque de défaut d'un client à partir de données de demande de crédit, d'historique de remboursement et d'informations externes.
+- Estimer le risque de défaut d'un demandeur de crédit.
+- Transformer un modèle entraîné en service exploitable.
+- Montrer une chaîne MLOps cohérente, de la conception à l'exploitation.
 
-La soutenance se concentre principalement sur la partie **MLOps** :
+## Périmètre du projet
 
-- exposition du modèle via une API ;
-- déploiement Docker sur Hugging Face Spaces ;
-- mise en place d'un pipeline CI/CD ;
-- monitoring de l'API et des données ;
-- optimisation du temps d'inférence.
+- **Modèle** : classifier LightGBM sélectionné comme modèle de production.
+- **API** : service FastAPI pour exposer la prédiction.
+- **Interface** : application Streamlit pour tester un client et piloter le système.
+- **Monitoring** : logs API, dérive des données, qualité, latence et benchmark ONNX.
+- **Déploiement** : image Docker publiée sur Hugging Face Spaces via GitHub Actions.
 
-## Périmètre fonctionnel
+## Fil conducteur de la soutenance
 
-Le modèle retourne :
-
-- une probabilité de défaut ;
-- une décision binaire selon un seuil optimal ;
-- une réponse exploitable par une application ou un service métier.
-
-Exemple de sortie attendue :
-
-```json
-{
-  "probability": 0.1842,
-  "prediction": "Not likely to default"
-}
+```mermaid
+flowchart LR
+    A[Données Home Credit] --> B[Préprocessing]
+    B --> C[Sélection de features]
+    C --> D[Modèle LightGBM]
+    D --> E[API FastAPI]
+    E --> F[App Streamlit]
+    E --> G[Logs et monitoring]
+    F --> H[Déploiement HF Spaces]
+    G --> H
 ```
 
-## Architecture générale
+## Message important
 
-Le projet est organisé autour de quatre blocs :
+- Le projet ne cherche pas à livrer une plateforme complète de retraining.
+- La partie training reste configurable par code et YAML.
+- L'application déployée se concentre sur le modèle final, son usage et son
+  pilotage.
 
-1. **API FastAPI** : expose les routes `/predict`, `/lookup/{sk_id}`, `/model-info` et `/reference`.
-2. **Application Streamlit** : permet de piloter le monitoring, la dérive des données et les benchmarks d'inférence.
-3. **Monitoring** : collecte des logs API, logs de prédiction, rapports Evidently et métriques de performance.
-4. **CI/CD** : automatisation des tests, construction Docker et déploiement sur Hugging Face Spaces.
+## Ce que l'examinateur doit voir
 
-## Points à démontrer
-
-Pendant la soutenance, je montre :
-
-- une requête réelle vers l'API déployée ;
-- la réponse du modèle avec le score prédit ;
-- les rapports de monitoring ;
-- les métriques de performance ;
-- le pipeline CI/CD déclenché par un commit Git.
+- Une prédiction réalisée via l'application et via l'API.
+- Une documentation Swagger exploitable.
+- Des logs et indicateurs de supervision.
+- Des rapports de dérive et qualité générés avec Evidently.
+- Une CI qui valide le code et une CD qui déploie après succès sur `main`.
