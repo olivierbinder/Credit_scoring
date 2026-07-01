@@ -31,7 +31,9 @@ def test_education_mapping_is_consistent():
 
 
 def test_nullable_features_are_known_features():
-    known = set(NUMERICAL_FEATURES) | set(CATEGORICAL_FEATURES) | set(ENGINEERED_FEATURES)
+    known = (
+        set(NUMERICAL_FEATURES) | set(CATEGORICAL_FEATURES) | set(ENGINEERED_FEATURES)
+    )
     assert set(NULLABLE_FEATURES).issubset(known)
 
 
