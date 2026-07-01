@@ -1,44 +1,31 @@
 # Contexte de la mission
 
-## Objectif métier
+<div style="padding: 1rem 1.25rem; border-left: 0.28rem solid #448aff; background: rgba(68, 138, 255, 0.10); border-radius: 0.25rem; font-size: 1.08rem; line-height: 1.5;">
+Transformer un <strong>modèle de prédiction</strong> de risque de défaut d'un demandeur de crédit en <strong>application exploitable</strong>.
+</div>
 
-- Estimer le risque de défaut d'un demandeur de crédit.
-- Transformer un modèle entraîné en service exploitable.
-- Montrer une chaîne MLOps cohérente, de la conception à l'exploitation.
-
-## Périmètre du projet
-
-- **Modèle** : classifier LightGBM sélectionné comme modèle de production.
-- **API** : service FastAPI pour exposer la prédiction.
-- **Interface** : application Streamlit pour tester un client et piloter le système.
-- **Monitoring** : logs API, dérive des données, qualité, latence et benchmark ONNX.
-- **Déploiement** : image Docker publiée sur Hugging Face Spaces via GitHub Actions.
-
-## Fil conducteur de la soutenance
+## Schéma général
 
 ```mermaid
+%%{init: {"themeVariables": {"fontSize": "40px"}, "flowchart": {"nodeSpacing": 60, "rankSpacing": 80, "arrowMarkerAbsolute": true}} }%%
 flowchart LR
-    A[Données Home Credit] --> B[Préprocessing]
-    B --> C[Sélection de features]
-    C --> D[Modèle LightGBM]
-    D --> E[API FastAPI]
-    E --> F[App Streamlit]
-    E --> G[Logs et monitoring]
-    F --> H[Déploiement HF Spaces]
-    G --> H
+    A[Données Home Credit] --> B[Préparation données]
+    B --> C[Modèle LightGBM]
+    C --> D[API FastAPI]
+    D --> E[App Streamlit]
+    D --> F[Logs + monitoring]
+    E --> G[Déploiement HF Spaces]
+    F --> G
 ```
 
-## Message important
 
-- Le projet ne cherche pas à livrer une plateforme complète de retraining.
-- La partie training reste configurable par code et YAML.
-- L'application déployée se concentre sur le modèle final, son usage et son
-  pilotage.
+## Stack MLOps
 
-## Ce que l'examinateur doit voir
-
-- Une prédiction réalisée via l'application et via l'API.
-- Une documentation Swagger exploitable.
-- Des logs et indicateurs de supervision.
-- Des rapports de dérive et qualité générés avec Evidently.
-- Une CI qui valide le code et une CD qui déploie après succès sur `main`.
+[![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)](https://pandas.pydata.org/)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white)](https://scikit-learn.org/)
+[![LightGBM](https://img.shields.io/badge/LightGBM-02569B?style=for-the-badge&logo=microsoft&logoColor=white)](https://lightgbm.readthedocs.io/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/features/actions)
+[![Hugging Face](https://img.shields.io/badge/Hugging%20Face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/spaces)

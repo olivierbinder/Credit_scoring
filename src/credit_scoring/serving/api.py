@@ -15,37 +15,23 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel
 
 from credit_scoring.config import FILE_API, FILE_PRED
 from credit_scoring.serving.inference import (
-    CreditScoringInput,
     get_model,
     get_reference_df,
     lookup,
     predict,
 )
+from credit_scoring.serving.schemas import (
+    CreditScoringInput,
+    ErrorResponse,
+    HealthResponse,
+    ModelInfoResponse,
+    PredictionResponse,
+)
 
 PROCESS = psutil.Process(os.getpid())
-
-
-# %%  API SCHEMAS                                                                      .
-class ErrorResponse(BaseModel):
-    detail: str | list[dict]
-    request_id: str | None = None
-
-
-class HealthResponse(BaseModel):
-    status: str
-
-
-class ModelInfoResponse(BaseModel):
-    threshold: float
-
-
-class PredictionResponse(BaseModel):
-    probability: float
-    prediction: str
 
 
 COMMON_ERROR_RESPONSES = {

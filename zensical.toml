@@ -4,17 +4,18 @@ site_description = "Support de soutenance : modèle, API, application, monitorin
 site_author = "Olivier"
 docs_dir = "docs"
 site_dir = "site"
+extra_css = [
+  "stylesheets/presentation.css"
+]
 
 nav = [
-  {"Contexte" = "index.md"},
-  {"Conception du modèle" = "model.md"},
-  {"API FastAPI" = "api.md"},
-  {"App Prédiction" = "prediction.md"},
-  {"App Monitoring" = "monitoring.md"},
-  {"CI/CD" = "cicd.md"},
-  {"Docker et Hugging Face" = "deployment.md"},
-  {"Structure du dépôt" = "depot.md"},
-  {"Démo soutenance" = "demo.md"}
+  {"01. Contexte" = "index.md"},
+  {"02. Conception du modèle" = "02_model.md"},
+  {"03. API FastAPI" = "03_api.md"},
+  {"04. App Prédiction" = "04_prediction.md"},
+  {"05. App Monitoring" = "05_monitoring.md"},
+  {"06. CI/CD et Déploiement" = "06_cicd.md"},
+  {"07. Structure du dépôt" = "07_depot.md"}
 ]
 
 [project.theme]

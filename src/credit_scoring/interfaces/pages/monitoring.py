@@ -9,16 +9,19 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 import streamlit.components.v1
 from evidently import DataDefinition, Dataset, Report
 from evidently.presets import DataDriftPreset, DataSummaryPreset
+from plotly.subplots import make_subplots
 
 # Paths from config
 from credit_scoring.config import (
     CATEGORICAL_FEATURES,
     EDUCATION_INVERSE,
     FILE_API,
+    FILE_PRED,
     FILE_DRIFT_REPORT,
     FILE_QUALITY_REPORT,
     GENDER_INVERSE,
@@ -120,6 +123,83 @@ with tab1:
             )
             fig.update_layout(height=350, margin=dict(l=20, r=20, t=20, b=20))
             st.plotly_chart(fig, use_container_width=True)
+
+            pred_df = load_logs(FILE_PRED)
+            required_cols = {
+                "timestamp",
+                "inference_ms",
+                "cpu_percent",
+                "memory_mb",
+            }
+
+            if not pred_df.empty and required_cols.issubset(pred_df.columns):
+                if "success" in pred_df.columns:
+                    pred_df = pred_df[pred_df["success"].fillna(False)]
+
+                pred_df = pred_df.copy()
+                pred_df["timestamp"] = pd.to_datetime(pred_df["timestamp"])
+                for col in ["inference_ms", "cpu_percent", "memory_mb"]:
+                    pred_df[col] = pd.to_numeric(pred_df[col], errors="coerce")
+
+                pred_df = pred_df.sort_values("timestamp")
+                inference_df = pred_df.dropna(subset=["timestamp", "inference_ms"])
+                runtime_df = pred_df.dropna(
+                    subset=["timestamp", "cpu_percent", "memory_mb"],
+                    how="any",
+                )
+
+                if not inference_df.empty:
+                    st.subheader("Coûts runtime des prédictions")
+
+                    fig_inference = px.line(
+                        inference_df,
+                        x="timestamp",
+                        y="inference_ms",
+                        labels={
+                            "timestamp": "Date / Heure",
+                            "inference_ms": "Temps d'inférence (ms)",
+                        },
+                        template="plotly_white",
+                    )
+                    fig_inference.update_layout(
+                        height=320,
+                        margin=dict(l=20, r=20, t=20, b=20),
+                    )
+                    st.plotly_chart(fig_inference, use_container_width=True)
+
+                if not runtime_df.empty:
+                    fig_runtime = make_subplots(specs=[[{"secondary_y": True}]])
+                    fig_runtime.add_trace(
+                        go.Scatter(
+                            x=runtime_df["timestamp"],
+                            y=runtime_df["cpu_percent"],
+                            name="CPU (%)",
+                            mode="lines+markers",
+                        ),
+                        secondary_y=False,
+                    )
+                    fig_runtime.add_trace(
+                        go.Scatter(
+                            x=runtime_df["timestamp"],
+                            y=runtime_df["memory_mb"],
+                            name="Mémoire (MB)",
+                            mode="lines+markers",
+                        ),
+                        secondary_y=True,
+                    )
+                    fig_runtime.update_layout(
+                        height=320,
+                        margin=dict(l=20, r=20, t=20, b=20),
+                        template="plotly_white",
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                    )
+                    fig_runtime.update_xaxes(title_text="Date / Heure")
+                    fig_runtime.update_yaxes(title_text="CPU (%)", secondary_y=False)
+                    fig_runtime.update_yaxes(
+                        title_text="Mémoire (MB)",
+                        secondary_y=True,
+                    )
+                    st.plotly_chart(fig_runtime, use_container_width=True)
 
         else:
             st.info("Aucune donnée de logs disponible pour les routes suivies.")

@@ -5,5 +5,3 @@ services:
     ports:
       - "8000:8000"
       - "7860:7860"
-    env_file:
-      - .env
