@@ -8,6 +8,7 @@ extra_css = [
   "stylesheets/presentation.css"
 ]
 
+
 nav = [
   {"01. Contexte" = "index.md"},
   {"02. Conception du modèle" = "02_model.md"},
@@ -26,3 +27,4 @@ features = [
   "toc.follow",
   "content.code.copy"
 ]
+language = "fr"

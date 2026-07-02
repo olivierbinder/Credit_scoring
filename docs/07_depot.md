@@ -1,7 +1,7 @@
 # Structure du dépôt et synthèse finale
 
 <div style="padding: 1rem 1.25rem; border-left: 0.28rem solid #448aff; background: rgba(68, 138, 255, 0.10); border-radius: 0.25rem; font-size: 1.08rem; line-height: 1.5;">
-Le dépôt raconte le projet complet : <strong>données → modèle → API → interface → monitoring → déploiement</strong>.
+Le dépôt traduit les étapes du projet : <strong>données → modèle → API → interface → monitoring → déploiement</strong>.
 </div>
 
 ## Vue rapide

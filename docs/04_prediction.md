@@ -19,7 +19,7 @@ flowchart LR
     E --> F[Jauge + verdict]
 ```
 
-## Ce que l'app apporte
+## Affichage intelligible
 
 - Les 20 features sont regroupées par **thème métier**.
 - Les noms techniques sont remplacés par des labels plus lisibles.

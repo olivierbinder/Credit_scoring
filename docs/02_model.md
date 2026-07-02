@@ -40,7 +40,6 @@ flowchart TD
 | `config/training.yaml` | Reproduire les expériences |
 | MLflow | Tracer paramètres, métriques et seuil |
 | LightGBM | Modèle retenu pour production |
-| ONNX | Version optimisée pour benchmark |
 
 ## Sortie modèle
 

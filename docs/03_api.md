@@ -27,7 +27,6 @@ sequenceDiagram
 ```
 
 - `Pydantic` verrouille les entrées : types, catégories et valeurs manquantes.
-- Chaque requête reçoit un `request_id` pour relier réponse et logs.
 - Les erreurs sont explicites : `422`, `404`, `500`.
 - Les logs alimentent ensuite l'onglet monitoring.
 
@@ -52,6 +51,7 @@ sequenceDiagram
 
     ## Logs produits
 
+    - Un middleware, ou couche intermédiaire, intercepte chaque requête HTTP avant et après son traitement par l’endpoint.
     - Les appels HTTP gardent méthode, route, statut, latence, erreur et `request_id`.
     - Chaque prédiction garde inputs, probabilité, label, succès/erreur, latence, temps d'inférence, CPU et mémoire.
     - Le format `JSONL` écrit une ligne JSON par événement.

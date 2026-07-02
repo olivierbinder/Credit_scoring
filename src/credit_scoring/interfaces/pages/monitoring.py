@@ -21,8 +21,8 @@ from credit_scoring.config import (
     CATEGORICAL_FEATURES,
     EDUCATION_INVERSE,
     FILE_API,
-    FILE_PRED,
     FILE_DRIFT_REPORT,
+    FILE_PRED,
     FILE_QUALITY_REPORT,
     GENDER_INVERSE,
     NUMERICAL_FEATURES,
@@ -61,7 +61,7 @@ def normalize_api_path(path: str) -> str:
 # Tabs
 tab1, tab2, tab3 = st.tabs(
     [
-        "🖥️ Supervision de l’API",
+        "🖥️ Observabilité API et modèle",
         "📊 Détection de dérive des données",
         "⚡ Optimisation de l’inférence modèle",
     ]

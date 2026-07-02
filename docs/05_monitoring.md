@@ -1,10 +1,10 @@
 # Application Monitoring
 
 <div style="padding: 1rem 1.25rem; border-left: 0.28rem solid #448aff; background: rgba(68, 138, 255, 0.10); border-radius: 0.25rem; font-size: 1.08rem; line-height: 1.5;">
-Le monitoring répond à trois questions : <strong>l'API répond-elle ? les données dérivent-elles ? l'inférence coûte-t-elle cher ?</strong>
+Le monitoring suit trois axes : l'API est-elle <strong>disponible et performante</strong> ? les données <strong>dérivent-elles</strong> ? quel est le <strong>coût runtime</strong> des prédictions ?
 </div>
 
-## 1. Supervision de l'API
+## 1. Observabilité API et modèle
 
 [![psutil](https://img.shields.io/badge/psutil-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://psutil.readthedocs.io/)
 
